@@ -20,7 +20,7 @@ const latestActiveSession = (sessions: ExamSession[]) => sessions.filter((sessio
 export default function App() {
   const [view, setView] = useState<View>('banks'); const [banks, setBanks] = useState<QuestionBank[]>([]);
   const [bank, setBank] = useState<QuestionBank>(); const [preview, setPreview] = useState<Question[]>([]);
-  const [sourceName, setSourceName] = useState(''); const [loading, setLoading] = useState(''); const [error, setError] = useState('');
+  const [sourceName, setSourceName] = useState(''); const [sourcePdf, setSourcePdf] = useState<File>(); const [loading, setLoading] = useState(''); const [error, setError] = useState('');
   const [sessions, setSessions] = useState<ExamSession[]>([]); const [results, setResults] = useState<CycleResult[]>([]);
   const [wrongIds, setWrongIds] = useState<string[]>([]); const [stats, setStats] = useState<BankStatistics>();
   const [session, setSession] = useState<ExamSession>(); const [result, setResult] = useState<CycleResult>();
@@ -50,13 +50,13 @@ export default function App() {
   };
   const parseFile = async (file: File) => {
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) { setError('PDF 파일을 선택해 주세요.'); return; }
-    setError(''); setSourceName(file.name); setLoading('PDF를 여는 중…');
+    setError(''); setSourceName(file.name); setSourcePdf(file); setLoading('PDF를 여는 중…');
     try { const pages = await extractPdfText(file, (done, total) => setLoading(`텍스트 추출 중… ${done} / ${total} 페이지`)); setPreview(parsePdfQuestions(pages)); setView('preview'); }
     catch (e) { setError(e instanceof Error ? e.message : 'PDF 분석에 실패했습니다.'); } finally { setLoading(''); }
   };
   const savePreview = async () => {
     const name = sourceName.replace(/\.pdf$/i, '') || 'Question Bank';
-    const created: QuestionBank = { id: createId(), name, sourceFileName: sourceName, createdAt: new Date().toISOString(), questions: preview };
+    const created: QuestionBank = { id: createId(), name, sourceFileName: sourceName, createdAt: new Date().toISOString(), questions: preview, sourcePdf };
     await Promise.all([db.saveBank(created), db.saveStats(blankStats(created.id)), db.saveWrong({ bankId: created.id, questionIds: [] })]);
     await refreshBanks(); await loadDashboard(created);
   };
@@ -147,7 +147,7 @@ function Exam({ bank, initial, onSubmit, onExit }: { bank: QuestionBank; initial
   const answered = current.questionIds.filter((id) => current.answers[id]?.length).length;
   return <div className="exam-shell"><header className="exam-header"><div><strong>{current.kind === 'normal' ? `Cycle ${current.cycleNumber}` : '오답노트'}</strong><span>Question {current.currentIndex + 1} / {questions.length}</span></div>{current.endAt && <div className={`timer ${remaining < 300 ? 'warning' : ''}`}><small>남은 시간</small><strong>{formatTime(remaining)}</strong></div>}<div className="save-controls"><span>{saving ? '저장 중…' : savedAt ? `${savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 저장됨` : '자동 저장 켜짐'}</span><button className="secondary" disabled={saving} onClick={() => void saveCheckpoint()}>중간 저장</button><button className="secondary exit-button" onClick={() => { if (confirm('현재 위치와 답안을 저장하고 대시보드로 나갈까요?')) void saveCheckpoint().then(onExit); }}>나가기</button></div></header>
     <div className="progress"><span style={{ width: `${((current.currentIndex + 1) / questions.length) * 100}%` }} /></div><main className="exam-main"><aside className="navigator"><b>문제 번호</b><div>{questions.map((q, i) => <button key={q.id} className={`${i === current.currentIndex ? 'current' : ''} ${current.answers[q.id]?.length ? 'answered' : ''}`} onClick={() => void save({ ...currentRef.current, currentIndex: i })}>{i + 1}</button>)}</div><small>{answered}/{questions.length} 응답</small></aside>
-      <article className="question-panel"><span className="question-number">Question {question.originalNumber ?? current.currentIndex + 1}{question.correctAnswers.length > 1 && ' · 복수 선택'}</span><h2>{question.question}</h2><div className="choices">{question.choices.map((choice) => { const checked = (current.answers[question.id] ?? []).includes(choice.key); return <label className={checked ? 'selected' : ''} key={choice.key}><input type={question.correctAnswers.length > 1 ? 'checkbox' : 'radio'} name={question.id} checked={checked} onChange={() => select(choice.key)} /><b>{choice.key}</b><span>{choice.text}</span></label>; })}</div>
+      <article className="question-panel"><span className="question-number">Question {question.originalNumber ?? current.currentIndex + 1}{question.correctAnswers.length > 1 && ' · 복수 선택'}</span><h2>{question.question}</h2>{bank.sourcePdf ? <SourcePages pdf={bank.sourcePdf} pages={question.sourcePages} /> : <p className="source-unavailable">이미지·코드 확인용 원본 PDF가 없습니다. 이 문제은행은 이전 버전에서 생성되었습니다.</p>}<div className="choices">{question.choices.map((choice) => { const checked = (current.answers[question.id] ?? []).includes(choice.key); return <label className={checked ? 'selected' : ''} key={choice.key}><input type={question.correctAnswers.length > 1 ? 'checkbox' : 'radio'} name={question.id} checked={checked} onChange={() => select(choice.key)} /><b>{choice.key}</b><span>{choice.text}</span></label>; })}</div>
         <div className="exam-actions"><button className="secondary" disabled={!current.currentIndex} onClick={() => void save({ ...currentRef.current, currentIndex: currentRef.current.currentIndex - 1 })}>이전</button>{current.currentIndex < questions.length - 1 ? <button onClick={() => void save({ ...currentRef.current, currentIndex: currentRef.current.currentIndex + 1 })}>다음</button> : <button className="finish" onClick={() => confirm(`응답 ${answered}/${questions.length}. 시험을 제출할까요?`) && void onSubmit(currentRef.current)}>시험 종료</button>}</div></article></main>
   </div>;
 }
@@ -157,4 +157,14 @@ function Result({ bank, result, onExport, onDashboard }: { bank: QuestionBank; r
   return <section><div className="result-hero"><span>{result.kind === 'normal' ? `Cycle ${result.cycleNumber}` : '오답노트'} 완료</span><h1>{correct} / {result.results.length}</h1><strong>정답률 {result.results.length ? (correct / result.results.length * 100).toFixed(1) : '0.0'}%</strong><div><Metric label="정답" value={correct} /><Metric label="오답" value={wrong} warn={wrong > 0} /><Metric label="미응답" value={unanswered} /></div><div className="result-actions"><button onClick={onDashboard}>대시보드</button>{wrong > 0 && <button className="secondary" onClick={onExport}>틀린 문제 PDF 다운로드</button>}</div></div>
     <h2>문제별 결과</h2><div className="preview-list results">{result.results.map((item, i) => { const q = questions.get(item.questionId); if (!q) return null; return <details key={item.questionId}><summary><span>Question {q.originalNumber ?? i + 1}</span><span className={item.correct ? 'ok' : 'warning'}>{item.correct ? '정답' : item.unanswered ? '미응답' : '오답'}</span></summary><QuestionContent question={q} /><p><b>내 답:</b> {item.selected.join(', ') || '—'}<br /><b>정답:</b> {q.correctAnswers.join(', ')}</p>{q.explanation && <p><b>해설</b><br />{q.explanation}</p>}</details>; })}</div>
   </section>;
+}
+
+function SourcePages({ pdf, pages }: { pdf: Blob; pages: number[] }) {
+  const [open, setOpen] = useState(false); const [images, setImages] = useState<string[]>([]); const [loadError, setLoadError] = useState('');
+  useEffect(() => {
+    if (!open || images.length) return; let cancelled = false;
+    void import('./lib/pdf/renderPdfPages').then(({ renderPdfPages }) => renderPdfPages(pdf, pages)).then((rendered) => { if (!cancelled) setImages(rendered); }).catch(() => { if (!cancelled) setLoadError('원본 페이지를 불러오지 못했습니다.'); });
+    return () => { cancelled = true; };
+  }, [open, images.length, pages, pdf]);
+  return <div className="source-pages"><button className="secondary" onClick={() => setOpen((value) => !value)}>{open ? '원본 페이지 닫기' : `원본 PDF 페이지 보기 (${pages.map((page) => `p.${page}`).join(', ')})`}</button>{open && <div>{loadError ? <p className="error">{loadError}</p> : images.length ? images.map((src, index) => <img key={pages[index]} src={src} alt={`PDF 원본 ${pages[index]}페이지`} />) : <p className="muted">원본 페이지 렌더링 중…</p>}</div>}</div>;
 }

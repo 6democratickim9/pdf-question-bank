@@ -6,7 +6,7 @@ export interface Question {
   correctAnswers: string[]; explanation?: string; sourcePages: number[];
   rawText?: string; warnings?: ParsingWarning[];
 }
-export interface QuestionBank { id: string; name: string; sourceFileName: string; createdAt: string; questions: Question[] }
+export interface QuestionBank { id: string; name: string; sourceFileName: string; createdAt: string; questions: Question[]; sourcePdf?: Blob }
 export type ExamKind = 'normal' | 'wrong';
 export interface ExamSession {
   id: string; bankId: string; kind: ExamKind; cycleNumber?: number; questionIds: string[];
