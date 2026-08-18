@@ -11,7 +11,7 @@ export function createSession(bankId: string, kind: ExamKind, questions: Questio
   for (let i = questionIds.length - 1; i > 0; i -= 1) { const j = Math.floor(Math.random() * (i + 1)); [questionIds[i], questionIds[j]] = [questionIds[j], questionIds[i]]; }
   const started = Date.now();
   return { id: createId(), bankId, kind, cycleNumber, questionIds, answers: {}, currentIndex: 0,
-    startedAt: new Date(started).toISOString(), endAt: kind === 'normal' ? new Date(started + EXAM_DURATION_MS).toISOString() : undefined, status: 'active' };
+    startedAt: new Date(started).toISOString(), updatedAt: new Date(started).toISOString(), endAt: kind === 'normal' ? new Date(started + EXAM_DURATION_MS).toISOString() : undefined, status: 'active' };
 }
 
 export function gradeSession(session: ExamSession, questions: Question[]): CycleResult {

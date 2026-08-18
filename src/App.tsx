@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { db } from './lib/db';
 import { CYCLE_SIZE, createSession, gradeSession } from './lib/exam';
 import { createId } from './lib/id';
@@ -11,6 +11,11 @@ import type { BankStatistics, CycleResult, ExamSession, Question, QuestionBank }
 type View = 'banks' | 'upload' | 'preview' | 'dashboard' | 'exam' | 'result';
 const blankStats = (bankId: string): BankStatistics => ({ bankId, completedQuestionIds: [], completedCycles: [] });
 const formatTime = (seconds: number) => [Math.floor(seconds / 3600), Math.floor(seconds % 3600 / 60), seconds % 60].map((v) => String(v).padStart(2, '0')).join(':');
+const savedAnswerCount = (session: ExamSession) => Object.values(session.answers).filter((answers) => answers.length).length;
+const latestActiveSession = (sessions: ExamSession[]) => sessions.filter((session) => session.status === 'active').sort((a, b) => {
+  const answerDifference = savedAnswerCount(b) - savedAnswerCount(a);
+  return answerDifference || (b.updatedAt ?? b.startedAt).localeCompare(a.updatedAt ?? a.startedAt);
+})[0];
 
 export default function App() {
   const [view, setView] = useState<View>('banks'); const [banks, setBanks] = useState<QuestionBank[]>([]);
@@ -40,7 +45,7 @@ export default function App() {
   const openBank = async (selected: QuestionBank) => {
     const cleaned = await cleanStoredBank(selected);
     const [storedSessions, wrong, storedStats] = await Promise.all([db.sessions(cleaned.id), db.wrong(cleaned.id), db.stats(cleaned.id)]);
-    const active = storedSessions.find((s) => s.status === 'active');
+    const active = latestActiveSession(storedSessions);
     if (active) { setBank(cleaned); setSessions(storedSessions); setWrongIds(wrong?.questionIds ?? []); setStats(storedStats ?? blankStats(cleaned.id)); setSession(active); setView('exam'); } else await loadDashboard(cleaned);
   };
   const parseFile = async (file: File) => {
@@ -77,7 +82,7 @@ export default function App() {
 
   if (view === 'upload') return <Shell><Upload loading={loading} error={error} onFile={parseFile} onBack={() => setView('banks')} /></Shell>;
   if (view === 'preview') return <Shell><Preview questions={preview} fileName={sourceName} onSave={savePreview} onBack={() => setView('upload')} /></Shell>;
-  if (view === 'dashboard' && bank) return <Shell><Dashboard bank={bank} sessions={sessions} results={results} wrongIds={wrongIds} stats={stats ?? blankStats(bank.id)} onCycle={startNormal} onWrong={startWrong} onBack={() => { void refreshBanks(); setView('banks'); }} onReset={async (kind) => {
+  if (view === 'dashboard' && bank) return <Shell><Dashboard bank={bank} sessions={sessions} results={results} wrongIds={wrongIds} stats={stats ?? blankStats(bank.id)} onResume={(active) => { setSession(active); setView('exam'); }} onCycle={startNormal} onWrong={startWrong} onBack={() => { void refreshBanks(); setView('banks'); }} onReset={async (kind) => {
     if (kind === 'progress') await db.resetProgress(bank.id); if (kind === 'wrong') await db.saveWrong({ bankId: bank.id, questionIds: [] });
     if (kind === 'delete') { await db.deleteBank(bank.id); await refreshBanks(); setView('banks'); return; } await loadDashboard(bank);
   }} /></Shell>;
@@ -108,37 +113,42 @@ function Preview({ questions, fileName, onSave, onBack }: { questions: Question[
 function Metric({ label, value, warn }: { label: string; value: number; warn?: boolean }) { return <div className="metric"><span>{label}</span><strong className={warn ? 'warning' : ''}>{value.toLocaleString()}</strong></div>; }
 function QuestionContent({ question }: { question: Question }) { return <div className="question-content"><p className="question-text">{question.question || '(빈 문제)'}</p>{question.choices.map((c) => <p key={c.key} className="choice-text"><b>{c.key}.</b> {c.text}</p>)}</div>; }
 
-function Dashboard({ bank, sessions, results, wrongIds, stats, onCycle, onWrong, onBack, onReset }: { bank: QuestionBank; sessions: ExamSession[]; results: CycleResult[]; wrongIds: string[]; stats: BankStatistics; onCycle: (n: number) => void; onWrong: () => void; onBack: () => void; onReset: (kind: 'progress' | 'wrong' | 'delete') => void }) {
-  const cycles = Math.ceil(bank.questions.length / CYCLE_SIZE); const completed = new Set(stats.completedCycles); const active = sessions.find((s) => s.status === 'active');
-  return <section><button className="link" onClick={onBack}>← 문제은행 목록</button><div className="title-row"><div><h1>{bank.name}</h1><p className="muted">90 Questions / 90 Minutes</p></div>{active && <button onClick={() => location.reload()}>진행 중 시험 복구</button>}</div>
+function Dashboard({ bank, sessions, results, wrongIds, stats, onResume, onCycle, onWrong, onBack, onReset }: { bank: QuestionBank; sessions: ExamSession[]; results: CycleResult[]; wrongIds: string[]; stats: BankStatistics; onResume: (session: ExamSession) => void; onCycle: (n: number) => void; onWrong: () => void; onBack: () => void; onReset: (kind: 'progress' | 'wrong' | 'delete') => void }) {
+  const cycles = Math.ceil(bank.questions.length / CYCLE_SIZE); const completed = new Set(stats.completedCycles); const active = latestActiveSession(sessions);
+  return <section><button className="link" onClick={onBack}>← 문제은행 목록</button><div className="title-row"><div><h1>{bank.name}</h1><p className="muted">90 Questions / 90 Minutes</p></div>{active && <button onClick={() => onResume(active)}>진행 중 시험 복구 ({savedAnswerCount(active)}개 저장)</button>}</div>
     <div className="metrics"><Metric label="총 문제" value={bank.questions.length} /><Metric label="완료 문제" value={stats.completedQuestionIds.length} /><Metric label="미응시 문제" value={Math.max(0, bank.questions.length - stats.completedQuestionIds.length)} /><Metric label="현재 오답" value={wrongIds.length} warn={wrongIds.length > 0} /></div>
-    <div className="layout"><div><h2>일반 시험 Cycle</h2><div className="cycle-list">{Array.from({ length: cycles }, (_, i) => i + 1).map((n) => { const done = completed.has(n); const unlocked = n === 1 || completed.has(n - 1); const oldResult = results.find((r) => r.kind === 'normal' && r.cycleNumber === n); return <div className="cycle" key={n}><div><strong>Cycle {n}</strong><span>{Math.min(CYCLE_SIZE, bank.questions.length - (n - 1) * CYCLE_SIZE)} Questions</span></div><span>{done ? '완료' : unlocked ? '시작 가능' : '잠김'}</span>{done && oldResult ? <span>{oldResult.results.filter((r) => r.correct).length}/{oldResult.results.length}</span> : <button disabled={!unlocked} onClick={() => onCycle(n)}>시작</button>}</div>; })}</div></div>
+    <div className="layout"><div><h2>일반 시험 Cycle</h2><div className="cycle-list">{Array.from({ length: cycles }, (_, i) => i + 1).map((n) => { const done = completed.has(n); const unlocked = !active && (n === 1 || completed.has(n - 1)); const oldResult = results.find((r) => r.kind === 'normal' && r.cycleNumber === n); return <div className="cycle" key={n}><div><strong>Cycle {n}</strong><span>{Math.min(CYCLE_SIZE, bank.questions.length - (n - 1) * CYCLE_SIZE)} Questions</span></div><span>{done ? '완료' : active ? '진행 중 시험 있음' : unlocked ? '시작 가능' : '잠김'}</span>{done && oldResult ? <span>{oldResult.results.filter((r) => r.correct).length}/{oldResult.results.length}</span> : <button disabled={!unlocked} onClick={() => onCycle(n)}>시작</button>}</div>; })}</div></div>
       <aside><div className="wrong-card"><h2>오답노트</h2><strong>{wrongIds.length}</strong><span>Questions · 시간 제한 없음</span><button disabled={!wrongIds.length} onClick={onWrong}>오답노트 시작</button></div><details className="settings"><summary>설정</summary><button className="secondary" onClick={() => confirm('시험 진행상태와 결과를 초기화할까요?') && onReset('progress')}>시험 진행상태 초기화</button><button className="secondary" onClick={() => confirm('오답노트를 모두 지울까요?') && onReset('wrong')}>오답노트 초기화</button><button className="danger" onClick={() => confirm('문제은행과 모든 기록을 영구 삭제할까요?') && onReset('delete')}>문제은행 삭제</button></details></aside></div>
   </section>;
 }
 
 function Exam({ bank, initial, onSubmit, onExit }: { bank: QuestionBank; initial: ExamSession; onSubmit: (s: ExamSession) => void; onExit: () => void }) {
   const [current, setCurrent] = useState(initial); const [remaining, setRemaining] = useState(() => initial.endAt ? Math.max(0, Math.ceil((new Date(initial.endAt).getTime() - Date.now()) / 1000)) : 0);
-  const [savedAt, setSavedAt] = useState<Date | null>(null); const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<Date | null>(() => initial.updatedAt ? new Date(initial.updatedAt) : null); const [saving, setSaving] = useState(false);
+  const currentRef = useRef(initial); const writeQueue = useRef(Promise.resolve());
   const questions = useMemo(() => { const map = new Map(bank.questions.map((q) => [q.id, q])); return current.questionIds.map((id) => map.get(id)).filter((q): q is Question => !!q); }, [bank, current.questionIds]);
   const question = questions[current.currentIndex];
   useEffect(() => {
     if (!current.endAt) return; const tick = () => { const left = Math.max(0, Math.ceil((new Date(current.endAt!).getTime() - Date.now()) / 1000)); setRemaining(left); if (!left) void onSubmit(current); };
     tick(); const timer = window.setInterval(tick, 1000); return () => clearInterval(timer);
   }, [current, onSubmit]);
-  const save = async (next: ExamSession) => { setCurrent(next); setSaving(true); await db.saveSession(next); setSavedAt(new Date()); setSaving(false); };
-  const saveCheckpoint = async () => { setSaving(true); await db.saveSession(current); setSavedAt(new Date()); setSaving(false); };
+  const save = async (next: ExamSession) => {
+    const saved = { ...next, updatedAt: new Date().toISOString() }; currentRef.current = saved; setCurrent(saved); setSaving(true);
+    writeQueue.current = writeQueue.current.then(() => db.saveSession(saved).then(() => undefined)); await writeQueue.current;
+    if (currentRef.current.updatedAt === saved.updatedAt) { setSavedAt(new Date(saved.updatedAt)); setSaving(false); }
+  };
+  const saveCheckpoint = async () => save(currentRef.current);
   const select = (key: string) => {
-    if (!question) return; const old = current.answers[question.id] ?? []; const multiple = question.correctAnswers.length > 1;
+    if (!question) return; const base = currentRef.current; const old = base.answers[question.id] ?? []; const multiple = question.correctAnswers.length > 1;
     const selected = multiple ? (old.includes(key) ? old.filter((v) => v !== key) : [...old, key]) : [key];
-    void save({ ...current, answers: { ...current.answers, [question.id]: selected } });
+    void save({ ...base, answers: { ...base.answers, [question.id]: selected } });
   };
   if (!question) return <main><p>문제를 찾을 수 없습니다.</p><button onClick={onExit}>대시보드</button></main>;
   const answered = current.questionIds.filter((id) => current.answers[id]?.length).length;
   return <div className="exam-shell"><header className="exam-header"><div><strong>{current.kind === 'normal' ? `Cycle ${current.cycleNumber}` : '오답노트'}</strong><span>Question {current.currentIndex + 1} / {questions.length}</span></div>{current.endAt && <div className={`timer ${remaining < 300 ? 'warning' : ''}`}><small>남은 시간</small><strong>{formatTime(remaining)}</strong></div>}<div className="save-controls"><span>{saving ? '저장 중…' : savedAt ? `${savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 저장됨` : '자동 저장 켜짐'}</span><button className="secondary" disabled={saving} onClick={() => void saveCheckpoint()}>중간 저장</button><button className="secondary exit-button" onClick={() => { if (confirm('현재 위치와 답안을 저장하고 대시보드로 나갈까요?')) void saveCheckpoint().then(onExit); }}>나가기</button></div></header>
-    <div className="progress"><span style={{ width: `${((current.currentIndex + 1) / questions.length) * 100}%` }} /></div><main className="exam-main"><aside className="navigator"><b>문제 번호</b><div>{questions.map((q, i) => <button key={q.id} className={`${i === current.currentIndex ? 'current' : ''} ${current.answers[q.id]?.length ? 'answered' : ''}`} onClick={() => void save({ ...current, currentIndex: i })}>{i + 1}</button>)}</div><small>{answered}/{questions.length} 응답</small></aside>
+    <div className="progress"><span style={{ width: `${((current.currentIndex + 1) / questions.length) * 100}%` }} /></div><main className="exam-main"><aside className="navigator"><b>문제 번호</b><div>{questions.map((q, i) => <button key={q.id} className={`${i === current.currentIndex ? 'current' : ''} ${current.answers[q.id]?.length ? 'answered' : ''}`} onClick={() => void save({ ...currentRef.current, currentIndex: i })}>{i + 1}</button>)}</div><small>{answered}/{questions.length} 응답</small></aside>
       <article className="question-panel"><span className="question-number">Question {question.originalNumber ?? current.currentIndex + 1}{question.correctAnswers.length > 1 && ' · 복수 선택'}</span><h2>{question.question}</h2><div className="choices">{question.choices.map((choice) => { const checked = (current.answers[question.id] ?? []).includes(choice.key); return <label className={checked ? 'selected' : ''} key={choice.key}><input type={question.correctAnswers.length > 1 ? 'checkbox' : 'radio'} name={question.id} checked={checked} onChange={() => select(choice.key)} /><b>{choice.key}</b><span>{choice.text}</span></label>; })}</div>
-        <div className="exam-actions"><button className="secondary" disabled={!current.currentIndex} onClick={() => void save({ ...current, currentIndex: current.currentIndex - 1 })}>이전</button>{current.currentIndex < questions.length - 1 ? <button onClick={() => void save({ ...current, currentIndex: current.currentIndex + 1 })}>다음</button> : <button className="finish" onClick={() => confirm(`응답 ${answered}/${questions.length}. 시험을 제출할까요?`) && void onSubmit(current)}>시험 종료</button>}</div></article></main>
+        <div className="exam-actions"><button className="secondary" disabled={!current.currentIndex} onClick={() => void save({ ...currentRef.current, currentIndex: currentRef.current.currentIndex - 1 })}>이전</button>{current.currentIndex < questions.length - 1 ? <button onClick={() => void save({ ...currentRef.current, currentIndex: currentRef.current.currentIndex + 1 })}>다음</button> : <button className="finish" onClick={() => confirm(`응답 ${answered}/${questions.length}. 시험을 제출할까요?`) && void onSubmit(currentRef.current)}>시험 종료</button>}</div></article></main>
   </div>;
 }
 
