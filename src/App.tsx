@@ -106,13 +106,15 @@ function Dashboard({ bank, sessions, results, wrongIds, stats, onCycle, onWrong,
 
 function Exam({ bank, initial, onSubmit, onExit }: { bank: QuestionBank; initial: ExamSession; onSubmit: (s: ExamSession) => void; onExit: () => void }) {
   const [current, setCurrent] = useState(initial); const [remaining, setRemaining] = useState(() => initial.endAt ? Math.max(0, Math.ceil((new Date(initial.endAt).getTime() - Date.now()) / 1000)) : 0);
+  const [savedAt, setSavedAt] = useState<Date | null>(null); const [saving, setSaving] = useState(false);
   const questions = useMemo(() => { const map = new Map(bank.questions.map((q) => [q.id, q])); return current.questionIds.map((id) => map.get(id)).filter((q): q is Question => !!q); }, [bank, current.questionIds]);
   const question = questions[current.currentIndex];
   useEffect(() => {
     if (!current.endAt) return; const tick = () => { const left = Math.max(0, Math.ceil((new Date(current.endAt!).getTime() - Date.now()) / 1000)); setRemaining(left); if (!left) void onSubmit(current); };
     tick(); const timer = window.setInterval(tick, 1000); return () => clearInterval(timer);
   }, [current, onSubmit]);
-  const save = async (next: ExamSession) => { setCurrent(next); await db.saveSession(next); };
+  const save = async (next: ExamSession) => { setCurrent(next); setSaving(true); await db.saveSession(next); setSavedAt(new Date()); setSaving(false); };
+  const saveCheckpoint = async () => { setSaving(true); await db.saveSession(current); setSavedAt(new Date()); setSaving(false); };
   const select = (key: string) => {
     if (!question) return; const old = current.answers[question.id] ?? []; const multiple = question.correctAnswers.length > 1;
     const selected = multiple ? (old.includes(key) ? old.filter((v) => v !== key) : [...old, key]) : [key];
@@ -120,7 +122,7 @@ function Exam({ bank, initial, onSubmit, onExit }: { bank: QuestionBank; initial
   };
   if (!question) return <main><p>문제를 찾을 수 없습니다.</p><button onClick={onExit}>대시보드</button></main>;
   const answered = current.questionIds.filter((id) => current.answers[id]?.length).length;
-  return <div className="exam-shell"><header className="exam-header"><div><strong>{current.kind === 'normal' ? `Cycle ${current.cycleNumber}` : '오답노트'}</strong><span>Question {current.currentIndex + 1} / {questions.length}</span></div>{current.endAt && <div className={`timer ${remaining < 300 ? 'warning' : ''}`}><small>남은 시간</small><strong>{formatTime(remaining)}</strong></div>}<button className="secondary" onClick={() => { if (confirm('시험은 저장됩니다. 대시보드로 나갈까요?')) onExit(); }}>나가기</button></header>
+  return <div className="exam-shell"><header className="exam-header"><div><strong>{current.kind === 'normal' ? `Cycle ${current.cycleNumber}` : '오답노트'}</strong><span>Question {current.currentIndex + 1} / {questions.length}</span></div>{current.endAt && <div className={`timer ${remaining < 300 ? 'warning' : ''}`}><small>남은 시간</small><strong>{formatTime(remaining)}</strong></div>}<div className="save-controls"><span>{saving ? '저장 중…' : savedAt ? `${savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 저장됨` : '자동 저장 켜짐'}</span><button className="secondary" disabled={saving} onClick={() => void saveCheckpoint()}>중간 저장</button><button className="secondary exit-button" onClick={() => { if (confirm('현재 위치와 답안을 저장하고 대시보드로 나갈까요?')) void saveCheckpoint().then(onExit); }}>나가기</button></div></header>
     <div className="progress"><span style={{ width: `${((current.currentIndex + 1) / questions.length) * 100}%` }} /></div><main className="exam-main"><aside className="navigator"><b>문제 번호</b><div>{questions.map((q, i) => <button key={q.id} className={`${i === current.currentIndex ? 'current' : ''} ${current.answers[q.id]?.length ? 'answered' : ''}`} onClick={() => void save({ ...current, currentIndex: i })}>{i + 1}</button>)}</div><small>{answered}/{questions.length} 응답</small></aside>
       <article className="question-panel"><span className="question-number">Question {question.originalNumber ?? current.currentIndex + 1}{question.correctAnswers.length > 1 && ' · 복수 선택'}</span><h2>{question.question}</h2><div className="choices">{question.choices.map((choice) => { const checked = (current.answers[question.id] ?? []).includes(choice.key); return <label className={checked ? 'selected' : ''} key={choice.key}><input type={question.correctAnswers.length > 1 ? 'checkbox' : 'radio'} name={question.id} checked={checked} onChange={() => select(choice.key)} /><b>{choice.key}</b><span>{choice.text}</span></label>; })}</div>
         <div className="exam-actions"><button className="secondary" disabled={!current.currentIndex} onClick={() => void save({ ...current, currentIndex: current.currentIndex - 1 })}>이전</button>{current.currentIndex < questions.length - 1 ? <button onClick={() => void save({ ...current, currentIndex: current.currentIndex + 1 })}>다음</button> : <button className="finish" onClick={() => confirm(`응답 ${answered}/${questions.length}. 시험을 제출할까요?`) && void onSubmit(current)}>시험 종료</button>}</div></article></main>
