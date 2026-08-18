@@ -18,7 +18,7 @@ export function parseQuestionBlock(block: QuestionBlock, duplicate = false): Que
     const answer = text.match(ANSWER_START);
     if (answer) {
       answers.push(...(answer[1].toUpperCase().match(/[A-H]/g) ?? []));
-      mode = 'body';
+      if (answer[2]?.trim() && mode === 'explanation') explanation.push(answer[2].trim());
       continue;
     }
     const exp = text.match(EXPLANATION_START);

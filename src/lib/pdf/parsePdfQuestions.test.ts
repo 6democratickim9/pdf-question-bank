@@ -26,4 +26,8 @@ describe('PDF question parser', () => {
     const qs = parsePdfQuestions([{ pageNumber: 1, text: 'Page 1\nQuestion 1\nFirst\nA. a\nB. b\nAnswer: A\nPage 2\nQuestion 1\nSecond\nA. a\nB. b\nAnswer: B' }]);
     expect(qs).toHaveLength(2); expect(qs[0].warnings).toContain('DUPLICATE_NUMBER');
   });
+  it('supports Korean answer and explanation labels', () => {
+    const [q] = parsePdfQuestions([{ pageNumber: 1, text: 'Question 1\n질문입니다\nA. 보기 1\nB. 보기 2\n정답 및 해설\n정답 B\n정답은 B이다.' }]);
+    expect(q.correctAnswers).toEqual(['B']); expect(q.explanation).toBe('정답은 B이다.'); expect(q.choices[1].text).toBe('보기 2');
+  });
 });
