@@ -5,6 +5,7 @@ import { createId } from './lib/id';
 import { exportWrongAnswers } from './lib/exportWrongAnswers';
 import { extractPdfText } from './lib/pdf/extractPdfText';
 import { parsePdfQuestions } from './lib/pdf/parsePdfQuestions';
+import { cleanQuestionText } from './lib/pdf/cleanQuestionText';
 import type { BankStatistics, CycleResult, ExamSession, Question, QuestionBank } from './types';
 
 type View = 'banks' | 'upload' | 'preview' | 'dashboard' | 'exam' | 'result';
@@ -21,14 +22,26 @@ export default function App() {
 
   const refreshBanks = async () => setBanks((await db.banks()).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
   useEffect(() => { void refreshBanks(); }, []);
+  const cleanStoredBank = async (stored: QuestionBank) => {
+    let changed = false;
+    const questions = stored.questions.map((question) => {
+      const cleaned = cleanQuestionText(question.question);
+      if (cleaned === question.question) return question;
+      changed = true; return { ...question, question: cleaned };
+    });
+    if (!changed) return stored;
+    const cleanedBank = { ...stored, questions }; await db.saveBank(cleanedBank); return cleanedBank;
+  };
   const loadDashboard = async (selected: QuestionBank) => {
-    const [ss, rr, wrong, storedStats] = await Promise.all([db.sessions(selected.id), db.results(selected.id), db.wrong(selected.id), db.stats(selected.id)]);
-    setBank(selected); setSessions(ss); setResults(rr); setWrongIds(wrong?.questionIds ?? []); setStats(storedStats ?? blankStats(selected.id)); setView('dashboard');
+    const cleaned = await cleanStoredBank(selected);
+    const [ss, rr, wrong, storedStats] = await Promise.all([db.sessions(cleaned.id), db.results(cleaned.id), db.wrong(cleaned.id), db.stats(cleaned.id)]);
+    setBank(cleaned); setSessions(ss); setResults(rr); setWrongIds(wrong?.questionIds ?? []); setStats(storedStats ?? blankStats(cleaned.id)); setView('dashboard');
   };
   const openBank = async (selected: QuestionBank) => {
-    const [storedSessions, wrong, storedStats] = await Promise.all([db.sessions(selected.id), db.wrong(selected.id), db.stats(selected.id)]);
+    const cleaned = await cleanStoredBank(selected);
+    const [storedSessions, wrong, storedStats] = await Promise.all([db.sessions(cleaned.id), db.wrong(cleaned.id), db.stats(cleaned.id)]);
     const active = storedSessions.find((s) => s.status === 'active');
-    if (active) { setBank(selected); setSessions(storedSessions); setWrongIds(wrong?.questionIds ?? []); setStats(storedStats ?? blankStats(selected.id)); setSession(active); setView('exam'); } else await loadDashboard(selected);
+    if (active) { setBank(cleaned); setSessions(storedSessions); setWrongIds(wrong?.questionIds ?? []); setStats(storedStats ?? blankStats(cleaned.id)); setSession(active); setView('exam'); } else await loadDashboard(cleaned);
   };
   const parseFile = async (file: File) => {
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) { setError('PDF 파일을 선택해 주세요.'); return; }

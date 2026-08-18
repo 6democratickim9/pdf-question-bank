@@ -30,4 +30,8 @@ describe('PDF question parser', () => {
     const [q] = parsePdfQuestions([{ pageNumber: 1, text: 'Question 1\n질문입니다\nA. 보기 1\nB. 보기 2\n정답 및 해설\n정답 B\n정답은 B이다.' }]);
     expect(q.correctAnswers).toEqual(['B']); expect(q.explanation).toBe('정답은 B이다.'); expect(q.choices[1].text).toBe('보기 2');
   });
+  it('removes a repeated certification code at the start of a question', () => {
+    const [q] = parsePdfQuestions([{ pageNumber: 1, text: 'Question 1\nDVA-C02 개발자는 무엇을 해야 합니까?\nA. 보기 1\nB. 보기 2\n정답: A' }]);
+    expect(q.question).toBe('개발자는 무엇을 해야 합니까?');
+  });
 });

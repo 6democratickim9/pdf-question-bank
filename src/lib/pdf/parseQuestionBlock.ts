@@ -1,5 +1,6 @@
 import type { ParsingWarning, Question } from '../../types';
 import { createId } from '../id';
+import { cleanQuestionText } from './cleanQuestionText';
 import type { QuestionBlock } from './detectQuestions';
 import { ANSWER_START, CHOICE_START, EXPLANATION_START, EXPLICIT_QUESTION_START, NUMBERED_QUESTION_START, PAGE_NOISE } from './parserPatterns';
 
@@ -33,7 +34,7 @@ export function parseQuestionBlock(block: QuestionBlock, duplicate = false): Que
     else if (mode === 'choice' && choices.length) choices[choices.length - 1].text += ` ${clean}`;
     else body.push(clean);
   }
-  const question = body.filter(Boolean).join(' ').trim();
+  const question = cleanQuestionText(body.filter(Boolean).join(' ').trim());
   const warnings: ParsingWarning[] = [];
   if (!question) warnings.push('EMPTY_QUESTION');
   if (!choices.length) warnings.push('NO_CHOICES');
