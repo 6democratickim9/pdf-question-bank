@@ -92,7 +92,7 @@ export default function App() {
     if (kind === 'delete') { await db.deleteBank(bank.id); await refreshBanks(); setView('banks'); return; } await loadDashboard(bank);
   }} /></Shell>;
   if (view === 'exam' && bank && session) return <Exam bank={bank} initial={session} onSubmit={submit} onExit={() => loadDashboard(bank)} />;
-  if (view === 'result' && bank && result) return <Shell><Result bank={bank} result={result} onExport={() => exportWrongAnswers(bank, result)} onDashboard={() => loadDashboard(bank)} /></Shell>;
+  if (view === 'result' && bank && result) return <Shell><Result bank={bank} result={result} onAttachPdf={attachSourcePdf} onExport={() => exportWrongAnswers(bank, result)} onDashboard={() => loadDashboard(bank)} /></Shell>;
   return <Shell><BankList banks={banks} onOpen={openBank} onAdd={() => setView('upload')} /></Shell>;
 }
 
@@ -158,10 +158,11 @@ function Exam({ bank, initial, onSubmit, onExit }: { bank: QuestionBank; initial
   </div>;
 }
 
-function Result({ bank, result, onExport, onDashboard }: { bank: QuestionBank; result: CycleResult; onExport: () => void; onDashboard: () => void }) {
+function Result({ bank, result, onAttachPdf, onExport, onDashboard }: { bank: QuestionBank; result: CycleResult; onAttachPdf: (file: File) => void; onExport: () => void; onDashboard: () => void }) {
   const correct = result.results.filter((r) => r.correct).length; const unanswered = result.results.filter((r) => r.unanswered).length; const wrong = result.results.length - correct; const questions = new Map(bank.questions.map((q) => [q.id, q]));
   return <section><div className="result-hero"><span>{result.kind === 'normal' ? `Cycle ${result.cycleNumber}` : '오답노트'} 완료</span><h1>{correct} / {result.results.length}</h1><strong>정답률 {result.results.length ? (correct / result.results.length * 100).toFixed(1) : '0.0'}%</strong><div><Metric label="정답" value={correct} /><Metric label="오답" value={wrong} warn={wrong > 0} /><Metric label="미응답" value={unanswered} /></div><div className="result-actions"><button onClick={onDashboard}>대시보드</button>{wrong > 0 && <button className="secondary" onClick={onExport}>틀린 문제 PDF 다운로드</button>}</div></div>
-    <h2>문제별 결과</h2><div className="preview-list results">{result.results.map((item, i) => { const q = questions.get(item.questionId); if (!q) return null; return <details key={item.questionId}><summary><span>Question {q.originalNumber ?? i + 1}</span><span className={item.correct ? 'ok' : 'warning'}>{item.correct ? '정답' : item.unanswered ? '미응답' : '오답'}</span></summary><QuestionContent question={q} /><p><b>내 답:</b> {item.selected.join(', ') || '—'}<br /><b>정답:</b> {q.correctAnswers.join(', ')}</p>{q.explanation && <p><b>해설</b><br />{q.explanation}</p>}</details>; })}</div>
+    {!bank.sourcePdf && <div className="attach-pdf"><div><strong>이미지·코드를 보려면 원본 PDF를 연결하세요</strong><span>시험 결과와 진행 기록은 그대로 유지됩니다.</span></div><label className="button-label">원본 PDF 연결<input type="file" accept="application/pdf,.pdf" onChange={(event) => { const file = event.target.files?.[0]; if (file) void onAttachPdf(file); }} /></label></div>}
+    <h2>문제별 결과</h2><div className="preview-list results">{result.results.map((item, i) => { const q = questions.get(item.questionId); if (!q) return null; return <details key={item.questionId}><summary><span>Question {q.originalNumber ?? i + 1}</span><span className={item.correct ? 'ok' : 'warning'}>{item.correct ? '정답' : item.unanswered ? '미응답' : '오답'}</span></summary><QuestionContent question={q} />{bank.sourcePdf && <SourcePages pdf={bank.sourcePdf} pages={q.sourcePages} />}<p><b>내 답:</b> {item.selected.join(', ') || '—'}<br /><b>정답:</b> {q.correctAnswers.join(', ') || '파싱되지 않음'}</p>{q.explanation && <p><b>해설</b><br />{q.explanation}</p>}</details>; })}</div>
   </section>;
 }
 

@@ -4,7 +4,7 @@ import { createId } from './id';
 export const CYCLE_SIZE = 90;
 export const EXAM_DURATION_MS = 90 * 60 * 1000;
 export const answerIsCorrect = (selected: string[], correct: string[]) =>
-  selected.length === correct.length && [...selected].sort().every((answer, i) => answer === [...correct].sort()[i]);
+  selected.length > 0 && correct.length > 0 && selected.length === correct.length && [...selected].sort().every((answer, i) => answer === [...correct].sort()[i]);
 
 export function createSession(bankId: string, kind: ExamKind, questions: Question[], cycleNumber?: number): ExamSession {
   const questionIds = questions.map((q) => q.id);
