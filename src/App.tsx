@@ -71,7 +71,8 @@ export default function App() {
   const attachSourcePdf = async (file: File) => {
     if (!bank) return;
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) { alert('PDF 파일을 선택해 주세요.'); return; }
-    const updated = { ...bank, sourcePdf: file }; await db.saveBank(updated); setBank(updated); await refreshBanks();
+    try { const updated = { ...bank, sourcePdf: file }; await db.saveBank(updated); setBank(updated); await refreshBanks(); alert('원본 PDF가 연결되었습니다. 현재 문제에서 원본 페이지를 확인할 수 있습니다.'); }
+    catch { alert('PDF 저장에 실패했습니다. 브라우저 저장 공간을 확인해 주세요.'); }
   };
   const submit = async (submitted: ExamSession) => {
     if (!bank) return; const graded = gradeSession(submitted, bank.questions); const closed = { ...submitted, status: 'submitted' as const };
@@ -91,7 +92,7 @@ export default function App() {
     if (kind === 'progress') await db.resetProgress(bank.id); if (kind === 'wrong') await db.saveWrong({ bankId: bank.id, questionIds: [] });
     if (kind === 'delete') { await db.deleteBank(bank.id); await refreshBanks(); setView('banks'); return; } await loadDashboard(bank);
   }} /></Shell>;
-  if (view === 'exam' && bank && session) return <Exam bank={bank} initial={session} onSubmit={submit} onExit={() => loadDashboard(bank)} />;
+  if (view === 'exam' && bank && session) return <Exam bank={bank} initial={session} onAttachPdf={attachSourcePdf} onSubmit={submit} onExit={() => loadDashboard(bank)} />;
   if (view === 'result' && bank && result) return <Shell><Result bank={bank} result={result} onAttachPdf={attachSourcePdf} onExport={() => exportWrongAnswers(bank, result)} onDashboard={() => loadDashboard(bank)} /></Shell>;
   return <Shell><BankList banks={banks} onOpen={openBank} onAdd={() => setView('upload')} /></Shell>;
 }
@@ -128,7 +129,7 @@ function Dashboard({ bank, sessions, results, wrongIds, stats, onAttachPdf, onRe
   </section>;
 }
 
-function Exam({ bank, initial, onSubmit, onExit }: { bank: QuestionBank; initial: ExamSession; onSubmit: (s: ExamSession) => void; onExit: () => void }) {
+function Exam({ bank, initial, onAttachPdf, onSubmit, onExit }: { bank: QuestionBank; initial: ExamSession; onAttachPdf: (file: File) => void; onSubmit: (s: ExamSession) => void; onExit: () => void }) {
   const [current, setCurrent] = useState(initial); const [remaining, setRemaining] = useState(() => initial.endAt ? Math.max(0, Math.ceil((new Date(initial.endAt).getTime() - Date.now()) / 1000)) : 0);
   const [savedAt, setSavedAt] = useState<Date | null>(() => initial.updatedAt ? new Date(initial.updatedAt) : null); const [saving, setSaving] = useState(false);
   const currentRef = useRef(initial); const writeQueue = useRef(Promise.resolve());
@@ -151,9 +152,11 @@ function Exam({ bank, initial, onSubmit, onExit }: { bank: QuestionBank; initial
   };
   if (!question) return <main><p>문제를 찾을 수 없습니다.</p><button onClick={onExit}>대시보드</button></main>;
   const answered = current.questionIds.filter((id) => current.answers[id]?.length).length;
+  const needsSource = !question.question.trim() || question.choices.length < 2;
+  const displayChoices = question.choices.length ? question.choices : ['A', 'B', 'C', 'D'].map((key) => ({ key, text: '원본 PDF의 선택지를 확인하세요.' }));
   return <div className="exam-shell"><header className="exam-header"><div><strong>{current.kind === 'normal' ? `Cycle ${current.cycleNumber}` : '오답노트'}</strong><span>Question {current.currentIndex + 1} / {questions.length}</span></div>{current.endAt && <div className={`timer ${remaining < 300 ? 'warning' : ''}`}><small>남은 시간</small><strong>{formatTime(remaining)}</strong></div>}<div className="save-controls"><span>{saving ? '저장 중…' : savedAt ? `${savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 저장됨` : '자동 저장 켜짐'}</span><button className="secondary" disabled={saving} onClick={() => void saveCheckpoint()}>중간 저장</button><button className="secondary exit-button" onClick={() => { if (confirm('현재 위치와 답안을 저장하고 대시보드로 나갈까요?')) void saveCheckpoint().then(onExit); }}>나가기</button></div></header>
     <div className="progress"><span style={{ width: `${((current.currentIndex + 1) / questions.length) * 100}%` }} /></div><main className="exam-main"><aside className="navigator"><b>문제 번호</b><div>{questions.map((q, i) => <button key={q.id} className={`${i === current.currentIndex ? 'current' : ''} ${current.answers[q.id]?.length ? 'answered' : ''}`} onClick={() => void save({ ...currentRef.current, currentIndex: i })}>{i + 1}</button>)}</div><small>{answered}/{questions.length} 응답</small></aside>
-      <article className="question-panel"><span className="question-number">Question {question.originalNumber ?? current.currentIndex + 1}{question.correctAnswers.length > 1 && ' · 복수 선택'}</span><h2>{question.question}</h2>{bank.sourcePdf ? <SourcePages pdf={bank.sourcePdf} pages={question.sourcePages} /> : <p className="source-unavailable">이미지·코드 확인용 원본 PDF가 없습니다. 이 문제은행은 이전 버전에서 생성되었습니다.</p>}<div className="choices">{question.choices.map((choice) => { const checked = (current.answers[question.id] ?? []).includes(choice.key); return <label className={checked ? 'selected' : ''} key={choice.key}><input type={question.correctAnswers.length > 1 ? 'checkbox' : 'radio'} name={question.id} checked={checked} onChange={() => select(choice.key)} /><b>{choice.key}</b><span>{choice.text}</span></label>; })}</div>
+      <article className="question-panel"><span className="question-number">Question {question.originalNumber ?? current.currentIndex + 1}{question.correctAnswers.length > 1 && ' · 복수 선택'}</span><h2>{question.question || '원본 PDF에서 문제를 확인하세요.'}</h2>{bank.sourcePdf ? <SourcePages key={question.id} pdf={bank.sourcePdf} pages={question.sourcePages} initialOpen={needsSource} /> : <div className="source-unavailable"><strong>이 문제의 이미지·코드·선택지가 PDF에만 있습니다.</strong><span>진행 기록을 유지한 채 지금 원본을 연결하세요.</span><label className="button-label">원본 PDF 연결<input type="file" accept="application/pdf,.pdf" onChange={(event) => { const file = event.target.files?.[0]; if (file) void onAttachPdf(file); }} /></label></div>}<div className="choices">{displayChoices.map((choice) => { const checked = (current.answers[question.id] ?? []).includes(choice.key); return <label className={checked ? 'selected' : ''} key={choice.key}><input type={question.correctAnswers.length > 1 ? 'checkbox' : 'radio'} name={question.id} checked={checked} onChange={() => select(choice.key)} /><b>{choice.key}</b><span>{choice.text}</span></label>; })}</div>
         <div className="exam-actions"><button className="secondary" disabled={!current.currentIndex} onClick={() => void save({ ...currentRef.current, currentIndex: currentRef.current.currentIndex - 1 })}>이전</button>{current.currentIndex < questions.length - 1 ? <button onClick={() => void save({ ...currentRef.current, currentIndex: currentRef.current.currentIndex + 1 })}>다음</button> : <button className="finish" onClick={() => confirm(`응답 ${answered}/${questions.length}. 시험을 제출할까요?`) && void onSubmit(currentRef.current)}>시험 종료</button>}</div></article></main>
   </div>;
 }
@@ -166,8 +169,8 @@ function Result({ bank, result, onAttachPdf, onExport, onDashboard }: { bank: Qu
   </section>;
 }
 
-function SourcePages({ pdf, pages }: { pdf: Blob; pages: number[] }) {
-  const [open, setOpen] = useState(false); const [images, setImages] = useState<string[]>([]); const [loadError, setLoadError] = useState('');
+function SourcePages({ pdf, pages, initialOpen = false }: { pdf: Blob; pages: number[]; initialOpen?: boolean }) {
+  const [open, setOpen] = useState(initialOpen); const [images, setImages] = useState<string[]>([]); const [loadError, setLoadError] = useState('');
   useEffect(() => {
     if (!open || images.length) return; let cancelled = false;
     void import('./lib/pdf/renderPdfPages').then(({ renderPdfPages }) => renderPdfPages(pdf, pages)).then((rendered) => { if (!cancelled) setImages(rendered); }).catch(() => { if (!cancelled) setLoadError('원본 페이지를 불러오지 못했습니다.'); });
