@@ -68,6 +68,11 @@ export default function App() {
     if (!bank) return; const set = new Set(wrongIds); const next = createSession(bank.id, 'wrong', bank.questions.filter((q) => set.has(q.id)));
     await db.saveSession(next); setSession(next); setView('exam');
   };
+  const attachSourcePdf = async (file: File) => {
+    if (!bank) return;
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) { alert('PDF 파일을 선택해 주세요.'); return; }
+    const updated = { ...bank, sourcePdf: file }; await db.saveBank(updated); setBank(updated); await refreshBanks();
+  };
   const submit = async (submitted: ExamSession) => {
     if (!bank) return; const graded = gradeSession(submitted, bank.questions); const closed = { ...submitted, status: 'submitted' as const };
     let updatedWrong = new Set(wrongIds);
@@ -82,7 +87,7 @@ export default function App() {
 
   if (view === 'upload') return <Shell><Upload loading={loading} error={error} onFile={parseFile} onBack={() => setView('banks')} /></Shell>;
   if (view === 'preview') return <Shell><Preview questions={preview} fileName={sourceName} onSave={savePreview} onBack={() => setView('upload')} /></Shell>;
-  if (view === 'dashboard' && bank) return <Shell><Dashboard bank={bank} sessions={sessions} results={results} wrongIds={wrongIds} stats={stats ?? blankStats(bank.id)} onResume={(active) => { setSession(active); setView('exam'); }} onCycle={startNormal} onWrong={startWrong} onBack={() => { void refreshBanks(); setView('banks'); }} onReset={async (kind) => {
+  if (view === 'dashboard' && bank) return <Shell><Dashboard bank={bank} sessions={sessions} results={results} wrongIds={wrongIds} stats={stats ?? blankStats(bank.id)} onAttachPdf={attachSourcePdf} onResume={(active) => { setSession(active); setView('exam'); }} onCycle={startNormal} onWrong={startWrong} onBack={() => { void refreshBanks(); setView('banks'); }} onReset={async (kind) => {
     if (kind === 'progress') await db.resetProgress(bank.id); if (kind === 'wrong') await db.saveWrong({ bankId: bank.id, questionIds: [] });
     if (kind === 'delete') { await db.deleteBank(bank.id); await refreshBanks(); setView('banks'); return; } await loadDashboard(bank);
   }} /></Shell>;
@@ -113,12 +118,13 @@ function Preview({ questions, fileName, onSave, onBack }: { questions: Question[
 function Metric({ label, value, warn }: { label: string; value: number; warn?: boolean }) { return <div className="metric"><span>{label}</span><strong className={warn ? 'warning' : ''}>{value.toLocaleString()}</strong></div>; }
 function QuestionContent({ question }: { question: Question }) { return <div className="question-content"><p className="question-text">{question.question || '(빈 문제)'}</p>{question.choices.map((c) => <p key={c.key} className="choice-text"><b>{c.key}.</b> {c.text}</p>)}</div>; }
 
-function Dashboard({ bank, sessions, results, wrongIds, stats, onResume, onCycle, onWrong, onBack, onReset }: { bank: QuestionBank; sessions: ExamSession[]; results: CycleResult[]; wrongIds: string[]; stats: BankStatistics; onResume: (session: ExamSession) => void; onCycle: (n: number) => void; onWrong: () => void; onBack: () => void; onReset: (kind: 'progress' | 'wrong' | 'delete') => void }) {
+function Dashboard({ bank, sessions, results, wrongIds, stats, onAttachPdf, onResume, onCycle, onWrong, onBack, onReset }: { bank: QuestionBank; sessions: ExamSession[]; results: CycleResult[]; wrongIds: string[]; stats: BankStatistics; onAttachPdf: (file: File) => void; onResume: (session: ExamSession) => void; onCycle: (n: number) => void; onWrong: () => void; onBack: () => void; onReset: (kind: 'progress' | 'wrong' | 'delete') => void }) {
   const cycles = Math.ceil(bank.questions.length / CYCLE_SIZE); const completed = new Set(stats.completedCycles); const active = latestActiveSession(sessions);
   return <section><button className="link" onClick={onBack}>← 문제은행 목록</button><div className="title-row"><div><h1>{bank.name}</h1><p className="muted">90 Questions / 90 Minutes</p></div>{active && <button onClick={() => onResume(active)}>진행 중 시험 복구 ({savedAnswerCount(active)}개 저장)</button>}</div>
+    {!bank.sourcePdf && <div className="attach-pdf"><div><strong>이미지·코드가 포함된 문제인가요?</strong><span>기존 기록을 유지하면서 원본 PDF만 연결할 수 있습니다.</span></div><label className="button-label">원본 PDF 연결<input type="file" accept="application/pdf,.pdf" onChange={(event) => { const file = event.target.files?.[0]; if (file) void onAttachPdf(file); }} /></label></div>}
     <div className="metrics"><Metric label="총 문제" value={bank.questions.length} /><Metric label="완료 문제" value={stats.completedQuestionIds.length} /><Metric label="미응시 문제" value={Math.max(0, bank.questions.length - stats.completedQuestionIds.length)} /><Metric label="현재 오답" value={wrongIds.length} warn={wrongIds.length > 0} /></div>
     <div className="layout"><div><h2>일반 시험 Cycle</h2><div className="cycle-list">{Array.from({ length: cycles }, (_, i) => i + 1).map((n) => { const done = completed.has(n); const unlocked = !active && (n === 1 || completed.has(n - 1)); const oldResult = results.find((r) => r.kind === 'normal' && r.cycleNumber === n); return <div className="cycle" key={n}><div><strong>Cycle {n}</strong><span>{Math.min(CYCLE_SIZE, bank.questions.length - (n - 1) * CYCLE_SIZE)} Questions</span></div><span>{done ? '완료' : active ? '진행 중 시험 있음' : unlocked ? '시작 가능' : '잠김'}</span>{done && oldResult ? <span>{oldResult.results.filter((r) => r.correct).length}/{oldResult.results.length}</span> : <button disabled={!unlocked} onClick={() => onCycle(n)}>시작</button>}</div>; })}</div></div>
-      <aside><div className="wrong-card"><h2>오답노트</h2><strong>{wrongIds.length}</strong><span>Questions · 시간 제한 없음</span><button disabled={!wrongIds.length} onClick={onWrong}>오답노트 시작</button></div><details className="settings"><summary>설정</summary><button className="secondary" onClick={() => confirm('시험 진행상태와 결과를 초기화할까요?') && onReset('progress')}>시험 진행상태 초기화</button><button className="secondary" onClick={() => confirm('오답노트를 모두 지울까요?') && onReset('wrong')}>오답노트 초기화</button><button className="danger" onClick={() => confirm('문제은행과 모든 기록을 영구 삭제할까요?') && onReset('delete')}>문제은행 삭제</button></details></aside></div>
+      <aside><div className="wrong-card"><h2>오답노트</h2><strong>{wrongIds.length}</strong><span>Questions · 시간 제한 없음</span><button disabled={!wrongIds.length} onClick={onWrong}>오답노트 시작</button></div><details className="settings"><summary>설정</summary>{bank.sourcePdf && <label className="button-label secondary-label">원본 PDF 교체<input type="file" accept="application/pdf,.pdf" onChange={(event) => { const file = event.target.files?.[0]; if (file) void onAttachPdf(file); }} /></label>}<button className="secondary" onClick={() => confirm('시험 진행상태와 결과를 초기화할까요?') && onReset('progress')}>시험 진행상태 초기화</button><button className="secondary" onClick={() => confirm('오답노트를 모두 지울까요?') && onReset('wrong')}>오답노트 초기화</button><button className="danger" onClick={() => confirm('문제은행과 모든 기록을 영구 삭제할까요?') && onReset('delete')}>문제은행 삭제</button></details></aside></div>
   </section>;
 }
 
