@@ -15,35 +15,59 @@ interface Feedback {
   question: Question;
   selected: string[];
   correct: boolean;
-  requeued: boolean;
   finished: boolean;
   remaining: number;
 }
 
-export default function WrongReviewExam({ bank, initial, onAttachPdf, onExit }: WrongReviewExamProps) {
+export default function WrongReviewExam({
+  bank,
+  initial,
+  onAttachPdf,
+  onExit,
+}: WrongReviewExamProps) {
   const [current, setCurrent] = useState(initial);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const [savedAt, setSavedAt] = useState<Date | null>(() => initial.updatedAt ? new Date(initial.updatedAt) : null);
+  const [savedAt, setSavedAt] = useState<Date | null>(
+    () => initial.updatedAt ? new Date(initial.updatedAt) : null,
+  );
   const [saving, setSaving] = useState(false);
+
   const currentRef = useRef(initial);
   const writeQueue = useRef(Promise.resolve());
 
-  const questionMap = useMemo(() => new Map(bank.questions.map((q) => [q.id, q])), [bank.questions]);
+  const questionMap = useMemo(
+    () => new Map(bank.questions.map((q) => [q.id, q])),
+    [bank.questions],
+  );
+
   const queuedQuestions = useMemo(
-    () => current.questionIds.map((id) => questionMap.get(id)).filter((q): q is Question => !!q),
+    () =>
+      current.questionIds
+        .map((id) => questionMap.get(id))
+        .filter((q): q is Question => !!q),
     [current.questionIds, questionMap],
   );
 
   const liveQuestion = queuedQuestions[current.currentIndex];
+
+  // 채점 직후 큐에서 문제가 빠져도 결과/해설 화면을 유지하기 위해
+  // feedback에 당시 문제를 보관합니다.
   const question = feedback?.question ?? liveQuestion;
 
   const saveSession = async (next: ExamSession) => {
-    const saved = { ...next, updatedAt: new Date().toISOString() };
+    const saved = {
+      ...next,
+      updatedAt: new Date().toISOString(),
+    };
+
     currentRef.current = saved;
     setCurrent(saved);
     setSaving(true);
 
-    writeQueue.current = writeQueue.current.then(() => db.saveSession(saved).then(() => undefined));
+    writeQueue.current = writeQueue.current.then(() =>
+      db.saveSession(saved).then(() => undefined),
+    );
+
     await writeQueue.current;
 
     if (currentRef.current.updatedAt === saved.updatedAt) {
@@ -56,11 +80,46 @@ export default function WrongReviewExam({ bank, initial, onAttachPdf, onExit }: 
 
   const saveCheckpoint = async () => saveSession(currentRef.current);
 
-  const gradeWrongQuestion = async (selected: string[]) => {
-    if (!liveQuestion || feedback || !selected.length) return;
+  const toggleAnswer = (key: string) => {
+    if (!liveQuestion || feedback) return;
 
-    const correct = answerIsCorrect(selected, liveQuestion.correctAnswers);
     const base = currentRef.current;
+    const previous = base.answers[liveQuestion.id] ?? [];
+    const multiple = liveQuestion.correctAnswers.length > 1;
+
+    const selected = multiple
+      ? previous.includes(key)
+        ? previous.filter((value) => value !== key)
+        : [...previous, key]
+      : [key];
+
+    void saveSession({
+      ...base,
+      answers: {
+        ...base.answers,
+        [liveQuestion.id]: selected,
+      },
+    });
+  };
+
+  const checkAnswer = async () => {
+    if (!liveQuestion || feedback) return;
+
+    const base = currentRef.current;
+    const selected = base.answers[liveQuestion.id] ?? [];
+
+    if (!selected.length) {
+      alert('답을 선택한 뒤 정답 확인을 눌러 주세요.');
+      return;
+    }
+
+    const correct = answerIsCorrect(
+      selected,
+      liveQuestion.correctAnswers,
+    );
+
+    // 맞으면 큐에서 제거
+    // 틀리면 현재 자리에서 제거한 뒤 맨 뒤에 다시 추가
     const transition = advanceWrongReviewQueue(
       base.questionIds,
       base.currentIndex,
@@ -68,6 +127,7 @@ export default function WrongReviewExam({ bank, initial, onAttachPdf, onExit }: 
       correct,
     );
 
+    // 다음에 재출제될 때는 답을 새로 고르도록 기존 답안 제거
     const answers = { ...base.answers };
     delete answers[liveQuestion.id];
 
@@ -79,47 +139,41 @@ export default function WrongReviewExam({ bank, initial, onAttachPdf, onExit }: 
       status: transition.finished ? 'submitted' : 'active',
     };
 
-    const storedWrong = new Set((await db.wrong(bank.id))?.questionIds ?? []);
+    const storedWrong = new Set(
+      (await db.wrong(bank.id))?.questionIds ?? [],
+    );
+
     if (correct) storedWrong.delete(liveQuestion.id);
     else storedWrong.add(liveQuestion.id);
 
     await Promise.all([
       saveSession(nextSession),
-      db.saveWrong({ bankId: bank.id, questionIds: [...storedWrong] }),
+      db.saveWrong({
+        bankId: bank.id,
+        questionIds: [...storedWrong],
+      }),
     ]);
 
+    // 여기서 다음 문제로 자동 이동하지 않습니다.
+    // 반드시 결과 + 해설을 먼저 보여줍니다.
     setFeedback({
       question: liveQuestion,
       selected,
       correct,
-      requeued: !correct,
       finished: transition.finished,
       remaining: transition.questionIds.length,
     });
   };
 
-  const select = (key: string) => {
-    if (!liveQuestion || feedback) return;
-
-    const base = currentRef.current;
-    const old = base.answers[liveQuestion.id] ?? [];
-    const multiple = liveQuestion.correctAnswers.length > 1;
-    const selected = multiple
-      ? (old.includes(key) ? old.filter((v) => v !== key) : [...old, key])
-      : [key];
-
-    if (multiple) {
-      void saveSession({ ...base, answers: { ...base.answers, [liveQuestion.id]: selected } });
-    } else {
-      void gradeWrongQuestion(selected);
-    }
-  };
-
-  const continueReview = () => {
+  const nextQuestion = () => {
     if (!feedback) return;
+
     const finished = feedback.finished;
     setFeedback(null);
-    if (finished) onExit();
+
+    if (finished) {
+      onExit();
+    }
   };
 
   if (!question) {
@@ -127,25 +181,30 @@ export default function WrongReviewExam({ bank, initial, onAttachPdf, onExit }: 
       <main>
         <div className="result-hero">
           <span>오답노트 완료</span>
-          <h1>0 Questions</h1>
+          <h1>모든 오답 해결</h1>
           <strong>현재 남아 있는 오답이 없습니다.</strong>
-          <div className="result-actions"><button onClick={onExit}>대시보드</button></div>
+          <div className="result-actions">
+            <button onClick={onExit}>대시보드</button>
+          </div>
         </div>
       </main>
     );
   }
 
-  const needsSource = !question.question.trim() || question.choices.length < 2;
-  const displayChoices = question.choices.length
-    ? question.choices
-    : ['A', 'B', 'C', 'D'].map((key) => ({ key, text: '원본 PDF의 선택지를 확인하세요.' }));
-
-  const displaySelected = feedback?.question.id === question.id
+  const selected = feedback
     ? feedback.selected
     : (current.answers[question.id] ?? []);
 
   const multiple = question.correctAnswers.length > 1;
-  const canGradeMultiple = multiple && displaySelected.length > 0 && !feedback;
+  const needsSource =
+    !question.question.trim() || question.choices.length < 2;
+
+  const displayChoices = question.choices.length
+    ? question.choices
+    : ['A', 'B', 'C', 'D'].map((key) => ({
+        key,
+        text: '원본 PDF의 선택지를 확인하세요.',
+      }));
 
   return (
     <div className="exam-shell">
@@ -156,23 +215,39 @@ export default function WrongReviewExam({ bank, initial, onAttachPdf, onExit }: 
             {feedback
               ? feedback.correct
                 ? `정답 · 남은 오답 ${feedback.remaining}개`
-                : `오답 · 맨 뒤로 이동 · 현재 큐 ${feedback.remaining}개`
+                : `오답 · 맨 뒤로 이동 · 남은 큐 ${feedback.remaining}개`
               : `현재 오답 큐 ${current.questionIds.length}개`}
           </span>
         </div>
+
         <div className="save-controls">
           <span>
             {saving
               ? '저장 중…'
               : savedAt
-                ? `${savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 저장됨`
+                ? `${savedAt.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })} 저장됨`
                 : '자동 저장 켜짐'}
           </span>
-          <button className="secondary" disabled={saving} onClick={() => void saveCheckpoint()}>중간 저장</button>
+
+          <button
+            className="secondary"
+            disabled={saving}
+            onClick={() => void saveCheckpoint()}
+          >
+            중간 저장
+          </button>
+
           <button
             className="secondary exit-button"
             onClick={() => {
-              if (confirm('현재 오답 큐를 저장하고 대시보드로 나갈까요?')) {
+              if (
+                confirm(
+                  '현재 오답 큐를 저장하고 대시보드로 나갈까요?',
+                )
+              ) {
                 void saveCheckpoint().then(onExit);
               }
             }}
@@ -183,16 +258,35 @@ export default function WrongReviewExam({ bank, initial, onAttachPdf, onExit }: 
       </header>
 
       <div className="progress">
-        <span style={{ width: feedback ? '100%' : `${current.questionIds.length ? 100 / current.questionIds.length : 100}%` }} />
+        <span
+          style={{
+            width: feedback ? '100%' : '50%',
+          }}
+        />
       </div>
 
       <main className="exam-main">
         <aside className="navigator">
           <b>오답 큐</b>
-          <div style={{ marginTop: 14, fontSize: 34, fontWeight: 800 }}>{current.questionIds.length}</div>
-          <small style={{ display: 'block', marginTop: 8, lineHeight: 1.6 }}>
-            맞히면 큐에서 제거<br />
-            틀리면 맨 뒤로 이동
+
+          <div className="wrong-queue-count">
+            {current.questionIds.length}
+          </div>
+
+          <small className="wrong-queue-help">
+            답 선택
+            <br />
+            ↓
+            <br />
+            정답 확인
+            <br />
+            ↓
+            <br />
+            해설 확인
+            <br />
+            ↓
+            <br />
+            다음 문제
           </small>
         </aside>
 
@@ -201,7 +295,11 @@ export default function WrongReviewExam({ bank, initial, onAttachPdf, onExit }: 
             Question {question.originalNumber ?? 1}
             {multiple && ' · 복수 선택'}
           </span>
-          <h2>{question.question || '원본 PDF에서 문제를 확인하세요.'}</h2>
+
+          <h2>
+            {question.question ||
+              '원본 PDF에서 문제를 확인하세요.'}
+          </h2>
 
           {bank.sourcePdf ? (
             <ReviewSourcePages
@@ -213,8 +311,13 @@ export default function WrongReviewExam({ bank, initial, onAttachPdf, onExit }: 
             />
           ) : (
             <div className="source-unavailable">
-              <strong>이 문제의 이미지·코드·선택지가 PDF에만 있습니다.</strong>
-              <span>진행 기록을 유지한 채 지금 원본을 연결하세요.</span>
+              <strong>
+                이 문제의 이미지·코드·선택지가 PDF에만 있습니다.
+              </strong>
+              <span>
+                진행 기록을 유지한 채 지금 원본을 연결하세요.
+              </span>
+
               <label className="button-label">
                 원본 PDF 연결
                 <input
@@ -231,27 +334,36 @@ export default function WrongReviewExam({ bank, initial, onAttachPdf, onExit }: 
 
           <div className="choices">
             {displayChoices.map((choice) => {
-              const checked = displaySelected.includes(choice.key);
-              const correctChoice = !!feedback && question.correctAnswers.includes(choice.key);
-              const wrongSelected = !!feedback && checked && !question.correctAnswers.includes(choice.key);
+              const checked = selected.includes(choice.key);
+
+              const isCorrectChoice =
+                !!feedback &&
+                question.correctAnswers.includes(choice.key);
+
+              const isWrongSelected =
+                !!feedback &&
+                checked &&
+                !question.correctAnswers.includes(choice.key);
 
               return (
                 <label
-                  className={checked ? 'selected' : ''}
                   key={choice.key}
-                  style={feedback ? {
-                    borderColor: correctChoice ? '#2f9e44' : wrongSelected ? '#e03131' : undefined,
-                    background: correctChoice ? '#ebfbee' : wrongSelected ? '#fff5f5' : undefined,
-                    opacity: !correctChoice && !checked ? 0.68 : 1,
-                  } : undefined}
+                  className={[
+                    checked ? 'selected' : '',
+                    isCorrectChoice ? 'answer-correct' : '',
+                    isWrongSelected ? 'answer-wrong' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                 >
                   <input
                     type={multiple ? 'checkbox' : 'radio'}
                     name={question.id}
                     checked={checked}
                     disabled={!!feedback}
-                    onChange={() => select(choice.key)}
+                    onChange={() => toggleAnswer(choice.key)}
                   />
+
                   <b>{choice.key}</b>
                   <span>{choice.text}</span>
                 </label>
@@ -259,12 +371,12 @@ export default function WrongReviewExam({ bank, initial, onAttachPdf, onExit }: 
             })}
           </div>
 
-          {multiple && !feedback && (
-            <div className="exam-actions" style={{ justifyContent: 'flex-end' }}>
+          {!feedback && (
+            <div className="exam-actions wrong-check-actions">
               <button
-                className="finish"
-                disabled={!canGradeMultiple}
-                onClick={() => void gradeWrongQuestion(displaySelected)}
+                className="finish wrong-check-button"
+                disabled={!selected.length}
+                onClick={() => void checkAnswer()}
               >
                 정답 확인
               </button>
@@ -272,43 +384,66 @@ export default function WrongReviewExam({ bank, initial, onAttachPdf, onExit }: 
           )}
 
           {feedback && (
-            <div
-              style={{
-                marginTop: 24,
-                padding: 20,
-                borderRadius: 14,
-                border: `1px solid ${feedback.correct ? '#8ce99a' : '#ffa8a8'}`,
-                background: feedback.correct ? '#ebfbee' : '#fff5f5',
-              }}
+            <section
+              className={`instant-feedback ${
+                feedback.correct
+                  ? 'instant-feedback-correct'
+                  : 'instant-feedback-wrong'
+              }`}
             >
-              <strong style={{ display: 'block', fontSize: 20, color: feedback.correct ? '#2b8a3e' : '#c92a2a' }}>
-                {feedback.correct ? '✓ 정답입니다.' : '✕ 오답입니다.'}
-              </strong>
+              <div className="instant-feedback-title">
+                {feedback.correct
+                  ? '✓ 정답입니다'
+                  : '✕ 오답입니다'}
+              </div>
+
+              <div className="instant-answer-grid">
+                <div>
+                  <span>내 답</span>
+                  <strong>
+                    {feedback.selected.join(', ') || '—'}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>정답</span>
+                  <strong>
+                    {question.correctAnswers.join(', ') ||
+                      '정답 파싱 안 됨'}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="instant-explanation">
+                <span>해설</span>
+
+                {question.explanation?.trim() ? (
+                  <p>{question.explanation}</p>
+                ) : (
+                  <p className="muted">
+                    이 문제에는 저장된 해설이 없습니다.
+                  </p>
+                )}
+              </div>
 
               {!feedback.correct && (
-                <p style={{ marginBottom: 8, color: '#c92a2a', fontWeight: 700 }}>
-                  이 문제는 오답 큐 맨 뒤로 이동했습니다. 한 바퀴 뒤에 다시 풀 수 있습니다.
-                </p>
+                <div className="requeue-notice">
+                  ↻ 이 문제는 오답 큐 맨 뒤로 이동했습니다.
+                  한 바퀴 뒤에 다시 출제됩니다.
+                </div>
               )}
 
-              <p>
-                <b>내 답:</b> {feedback.selected.join(', ') || '—'}<br />
-                <b>정답:</b> {question.correctAnswers.join(', ') || '파싱되지 않음'}
-              </p>
-
-              {question.explanation && (
-                <p>
-                  <b>해설</b><br />
-                  {question.explanation}
-                </p>
-              )}
-
-              <div className="exam-actions" style={{ justifyContent: 'flex-end', marginTop: 16 }}>
-                <button onClick={continueReview}>
-                  {feedback.finished ? '오답노트 완료 → 대시보드' : '다음 문제'}
+              <div className="exam-actions wrong-next-actions">
+                <button
+                  className="finish"
+                  onClick={nextQuestion}
+                >
+                  {feedback.finished
+                    ? '오답노트 완료 → 대시보드'
+                    : '다음 문제'}
                 </button>
               </div>
-            </div>
+            </section>
           )}
         </article>
       </main>
@@ -333,6 +468,7 @@ function ReviewSourcePages({
 
   useEffect(() => {
     if (!open || images.length) return;
+
     let cancelled = false;
 
     if (questionNumber == null) {
@@ -341,12 +477,18 @@ function ReviewSourcePages({
     }
 
     void import('./lib/pdf/renderPdfPages')
-      .then(({ renderQuestionPages }) => renderQuestionPages(pdf, pages, questionNumber))
+      .then(({ renderQuestionPages }) =>
+        renderQuestionPages(pdf, pages, questionNumber),
+      )
       .then((rendered) => {
         if (!cancelled) setImages(rendered);
       })
       .catch(() => {
-        if (!cancelled) setLoadError('정답을 제외한 문제 영역을 찾지 못했습니다.');
+        if (!cancelled) {
+          setLoadError(
+            '정답을 제외한 문제 영역을 찾지 못했습니다.',
+          );
+        }
       });
 
     return () => {
@@ -356,8 +498,15 @@ function ReviewSourcePages({
 
   return (
     <div className="source-pages">
-      <button className="secondary" onClick={() => setOpen((value) => !value)}>
-        {open ? '문제 원본 닫기' : `문제 원본 보기 · 정답 제외 (${pages.map((page) => `p.${page}`).join(', ')})`}
+      <button
+        className="secondary"
+        onClick={() => setOpen((value) => !value)}
+      >
+        {open
+          ? '문제 원본 닫기'
+          : `문제 원본 보기 · 정답 제외 (${pages
+              .map((page) => `p.${page}`)
+              .join(', ')})`}
       </button>
 
       {open && (
@@ -365,9 +514,17 @@ function ReviewSourcePages({
           {loadError ? (
             <p className="error">{loadError}</p>
           ) : images.length ? (
-            images.map((src, index) => <img key={pages[index]} src={src} alt={`PDF 문제 영역 ${pages[index]}페이지`} />)
+            images.map((src, index) => (
+              <img
+                key={pages[index]}
+                src={src}
+                alt={`PDF 문제 영역 ${pages[index]}페이지`}
+              />
+            ))
           ) : (
-            <p className="muted">정답을 제외한 문제 영역 렌더링 중…</p>
+            <p className="muted">
+              정답을 제외한 문제 영역 렌더링 중…
+            </p>
           )}
         </div>
       )}
