@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { db } from './lib/db';
-import { CYCLE_SIZE, createSession, gradeSession } from './lib/exam';
+import { answerIsCorrect, CYCLE_SIZE, createSession, gradeSession } from './lib/exam';
 import { createId } from './lib/id';
 import { exportWrongAnswers } from './lib/exportWrongAnswers';
 import { extractPdfText } from './lib/pdf/extractPdfText';
 import { parsePdfQuestions } from './lib/pdf/parsePdfQuestions';
 import { cleanQuestionText } from './lib/pdf/cleanQuestionText';
+import WrongReviewExam from './WrongReviewExam';
 import type { BankStatistics, CycleResult, ExamSession, Question, QuestionBank } from './types';
 
 type View = 'banks' | 'upload' | 'preview' | 'dashboard' | 'exam' | 'result';
@@ -68,6 +69,16 @@ export default function App() {
     if (!bank) return; const set = new Set(wrongIds); const next = createSession(bank.id, 'wrong', bank.questions.filter((q) => set.has(q.id)));
     await db.saveSession(next); setSession(next); setView('exam');
   };
+  const startPractice = async () => {
+    if (!bank) return; const next = createSession(bank.id, 'practice', bank.questions);
+    await db.saveSession(next); setSession(next); setView('exam');
+  };
+  const applyImmediateGrade = async (questionId: string, correct: boolean, kind: ExamSession['kind']) => {
+    if (!bank || kind === 'normal') return;
+    const stored = await db.wrong(bank.id); const updated = new Set(stored?.questionIds ?? wrongIds);
+    if (!correct) updated.add(questionId); else if (kind === 'wrong') updated.delete(questionId);
+    const questionIds = [...updated]; await db.saveWrong({ bankId: bank.id, questionIds }); setWrongIds(questionIds);
+  };
   const attachSourcePdf = async (file: File) => {
     if (!bank) return;
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) { alert('PDF 파일을 선택해 주세요.'); return; }
@@ -78,7 +89,7 @@ export default function App() {
     if (!bank) return; const graded = gradeSession(submitted, bank.questions); const closed = { ...submitted, status: 'submitted' as const };
     let updatedWrong = new Set(wrongIds);
     if (submitted.kind === 'normal') graded.results.filter((r) => !r.correct).forEach((r) => updatedWrong.add(r.questionId));
-    else graded.results.forEach((r) => r.correct ? updatedWrong.delete(r.questionId) : updatedWrong.add(r.questionId));
+    else if (submitted.kind === 'wrong') graded.results.forEach((r) => r.correct ? updatedWrong.delete(r.questionId) : updatedWrong.add(r.questionId));
     const updatedStats: BankStatistics = { bankId: bank.id,
       completedQuestionIds: [...new Set([...(stats?.completedQuestionIds ?? []), ...(submitted.kind === 'normal' ? submitted.questionIds : [])])],
       completedCycles: [...new Set([...(stats?.completedCycles ?? []), ...(submitted.kind === 'normal' && submitted.cycleNumber ? [submitted.cycleNumber] : [])])] };
@@ -88,11 +99,12 @@ export default function App() {
 
   if (view === 'upload') return <Shell><Upload loading={loading} error={error} onFile={parseFile} onBack={() => setView('banks')} /></Shell>;
   if (view === 'preview') return <Shell><Preview questions={preview} fileName={sourceName} onSave={savePreview} onBack={() => setView('upload')} /></Shell>;
-  if (view === 'dashboard' && bank) return <Shell><Dashboard bank={bank} sessions={sessions} results={results} wrongIds={wrongIds} stats={stats ?? blankStats(bank.id)} onAttachPdf={attachSourcePdf} onResume={(active) => { setSession(active); setView('exam'); }} onCycle={startNormal} onWrong={startWrong} onBack={() => { void refreshBanks(); setView('banks'); }} onReset={async (kind) => {
+  if (view === 'dashboard' && bank) return <Shell><Dashboard bank={bank} sessions={sessions} results={results} wrongIds={wrongIds} stats={stats ?? blankStats(bank.id)} onAttachPdf={attachSourcePdf} onResume={(active) => { setSession(active); setView('exam'); }} onCycle={startNormal} onPractice={startPractice} onWrong={startWrong} onBack={() => { void refreshBanks(); setView('banks'); }} onReset={async (kind) => {
     if (kind === 'progress') await db.resetProgress(bank.id); if (kind === 'wrong') await db.saveWrong({ bankId: bank.id, questionIds: [] });
     if (kind === 'delete') { await db.deleteBank(bank.id); await refreshBanks(); setView('banks'); return; } await loadDashboard(bank);
   }} /></Shell>;
-  if (view === 'exam' && bank && session) return <Exam bank={bank} initial={session} onAttachPdf={attachSourcePdf} onSubmit={submit} onExit={() => loadDashboard(bank)} />;
+  if (view === 'exam' && bank && session?.kind === 'wrong') return <WrongReviewExam bank={bank} initial={session} onAttachPdf={attachSourcePdf} onExit={() => loadDashboard(bank)} />;
+  if (view === 'exam' && bank && session) return <Exam bank={bank} initial={session} onAttachPdf={attachSourcePdf} onImmediateGrade={applyImmediateGrade} onSubmit={submit} onExit={() => loadDashboard(bank)} />;
   if (view === 'result' && bank && result) return <Shell><Result bank={bank} result={result} onAttachPdf={attachSourcePdf} onExport={() => exportWrongAnswers(bank, result)} onDashboard={() => loadDashboard(bank)} /></Shell>;
   return <Shell><BankList banks={banks} onOpen={openBank} onAdd={() => setView('upload')} /></Shell>;
 }
@@ -119,17 +131,17 @@ function Preview({ questions, fileName, onSave, onBack }: { questions: Question[
 function Metric({ label, value, warn }: { label: string; value: number; warn?: boolean }) { return <div className="metric"><span>{label}</span><strong className={warn ? 'warning' : ''}>{value.toLocaleString()}</strong></div>; }
 function QuestionContent({ question }: { question: Question }) { return <div className="question-content"><p className="question-text">{question.question || '(빈 문제)'}</p>{question.choices.map((c) => <p key={c.key} className="choice-text"><b>{c.key}.</b> {c.text}</p>)}</div>; }
 
-function Dashboard({ bank, sessions, results, wrongIds, stats, onAttachPdf, onResume, onCycle, onWrong, onBack, onReset }: { bank: QuestionBank; sessions: ExamSession[]; results: CycleResult[]; wrongIds: string[]; stats: BankStatistics; onAttachPdf: (file: File) => void; onResume: (session: ExamSession) => void; onCycle: (n: number) => void; onWrong: () => void; onBack: () => void; onReset: (kind: 'progress' | 'wrong' | 'delete') => void }) {
+function Dashboard({ bank, sessions, results, wrongIds, stats, onAttachPdf, onResume, onCycle, onPractice, onWrong, onBack, onReset }: { bank: QuestionBank; sessions: ExamSession[]; results: CycleResult[]; wrongIds: string[]; stats: BankStatistics; onAttachPdf: (file: File) => void; onResume: (session: ExamSession) => void; onCycle: (n: number) => void; onPractice: () => void; onWrong: () => void; onBack: () => void; onReset: (kind: 'progress' | 'wrong' | 'delete') => void }) {
   const cycles = Math.ceil(bank.questions.length / CYCLE_SIZE); const completed = new Set(stats.completedCycles); const active = latestActiveSession(sessions);
   return <section><button className="link" onClick={onBack}>← 문제은행 목록</button><div className="title-row"><div><h1>{bank.name}</h1><p className="muted">90 Questions / 90 Minutes</p></div>{active && <button onClick={() => onResume(active)}>진행 중 시험 복구 ({savedAnswerCount(active)}개 저장)</button>}</div>
     {!bank.sourcePdf && <div className="attach-pdf"><div><strong>이미지·코드가 포함된 문제인가요?</strong><span>기존 기록을 유지하면서 원본 PDF만 연결할 수 있습니다.</span></div><label className="button-label">원본 PDF 연결<input type="file" accept="application/pdf,.pdf" onChange={(event) => { const file = event.target.files?.[0]; if (file) void onAttachPdf(file); }} /></label></div>}
     <div className="metrics"><Metric label="총 문제" value={bank.questions.length} /><Metric label="완료 문제" value={stats.completedQuestionIds.length} /><Metric label="미응시 문제" value={Math.max(0, bank.questions.length - stats.completedQuestionIds.length)} /><Metric label="현재 오답" value={wrongIds.length} warn={wrongIds.length > 0} /></div>
     <div className="layout"><div><h2>일반 시험 Cycle</h2><div className="cycle-list">{Array.from({ length: cycles }, (_, i) => i + 1).map((n) => { const done = completed.has(n); const unlocked = !active && (n === 1 || completed.has(n - 1)); const oldResult = results.find((r) => r.kind === 'normal' && r.cycleNumber === n); return <div className="cycle" key={n}><div><strong>Cycle {n}</strong><span>{Math.min(CYCLE_SIZE, bank.questions.length - (n - 1) * CYCLE_SIZE)} Questions</span></div><span>{done ? '완료' : active ? '진행 중 시험 있음' : unlocked ? '시작 가능' : '잠김'}</span>{done && oldResult ? <span>{oldResult.results.filter((r) => r.correct).length}/{oldResult.results.length}</span> : <button disabled={!unlocked} onClick={() => onCycle(n)}>시작</button>}</div>; })}</div></div>
-      <aside><div className="wrong-card"><h2>오답노트</h2><strong>{wrongIds.length}</strong><span>Questions · 시간 제한 없음</span><button disabled={!wrongIds.length} onClick={onWrong}>오답노트 시작</button></div><details className="settings"><summary>설정</summary>{bank.sourcePdf && <label className="button-label secondary-label">원본 PDF 교체<input type="file" accept="application/pdf,.pdf" onChange={(event) => { const file = event.target.files?.[0]; if (file) void onAttachPdf(file); }} /></label>}<button className="secondary" onClick={() => confirm('시험 진행상태와 결과를 초기화할까요?') && onReset('progress')}>시험 진행상태 초기화</button><button className="secondary" onClick={() => confirm('오답노트를 모두 지울까요?') && onReset('wrong')}>오답노트 초기화</button><button className="danger" onClick={() => confirm('문제은행과 모든 기록을 영구 삭제할까요?') && onReset('delete')}>문제은행 삭제</button></details></aside></div>
+      <aside><div className="practice-card"><h2>전체 문제 연습</h2><span>{bank.questions.length} Questions · 시간 제한 없음</span><p>선택 즉시 정답과 해설을 확인하고, 틀린 문제는 바로 오답노트에 추가합니다.</p><button disabled={!!active} onClick={onPractice}>전체 문제 바로 풀기</button></div><div className="wrong-card"><h2>오답노트</h2><strong>{wrongIds.length}</strong><span>Questions · 즉시 정답 확인</span><button disabled={!wrongIds.length || !!active} onClick={onWrong}>오답노트 시작</button></div><details className="settings"><summary>설정</summary>{bank.sourcePdf && <label className="button-label secondary-label">원본 PDF 교체<input type="file" accept="application/pdf,.pdf" onChange={(event) => { const file = event.target.files?.[0]; if (file) void onAttachPdf(file); }} /></label>}<button className="secondary" onClick={() => confirm('시험 진행상태와 결과를 초기화할까요?') && onReset('progress')}>시험 진행상태 초기화</button><button className="secondary" onClick={() => confirm('오답노트를 모두 지울까요?') && onReset('wrong')}>오답노트 초기화</button><button className="danger" onClick={() => confirm('문제은행과 모든 기록을 영구 삭제할까요?') && onReset('delete')}>문제은행 삭제</button></details></aside></div>
   </section>;
 }
 
-function Exam({ bank, initial, onAttachPdf, onSubmit, onExit }: { bank: QuestionBank; initial: ExamSession; onAttachPdf: (file: File) => void; onSubmit: (s: ExamSession) => void; onExit: () => void }) {
+function Exam({ bank, initial, onAttachPdf, onImmediateGrade, onSubmit, onExit }: { bank: QuestionBank; initial: ExamSession; onAttachPdf: (file: File) => void; onImmediateGrade: (questionId: string, correct: boolean, kind: ExamSession['kind']) => void; onSubmit: (s: ExamSession) => void; onExit: () => void }) {
   const [current, setCurrent] = useState(initial); const [remaining, setRemaining] = useState(() => initial.endAt ? Math.max(0, Math.ceil((new Date(initial.endAt).getTime() - Date.now()) / 1000)) : 0);
   const [savedAt, setSavedAt] = useState<Date | null>(() => initial.updatedAt ? new Date(initial.updatedAt) : null); const [saving, setSaving] = useState(false);
   const currentRef = useRef(initial); const writeQueue = useRef(Promise.resolve());
@@ -145,25 +157,30 @@ function Exam({ bank, initial, onAttachPdf, onSubmit, onExit }: { bank: Question
     if (currentRef.current.updatedAt === saved.updatedAt) { setSavedAt(new Date(saved.updatedAt)); setSaving(false); }
   };
   const saveCheckpoint = async () => save(currentRef.current);
-  const select = (key: string) => {
+  const select = async (key: string) => {
+    if (current.kind !== 'normal' && (currentRef.current.answers[question?.id ?? '']?.length ?? 0) > 0) return;
     if (!question) return; const base = currentRef.current; const old = base.answers[question.id] ?? []; const multiple = question.correctAnswers.length > 1;
     const selected = multiple ? (old.includes(key) ? old.filter((v) => v !== key) : [...old, key]) : [key];
-    void save({ ...base, answers: { ...base.answers, [question.id]: selected } });
+    const next = { ...base, answers: { ...base.answers, [question.id]: selected } }; await save(next);
+    if (current.kind !== 'normal' && (!multiple || selected.length === question.correctAnswers.length)) await onImmediateGrade(question.id, answerIsCorrect(selected, question.correctAnswers), current.kind);
   };
   if (!question) return <main><p>문제를 찾을 수 없습니다.</p><button onClick={onExit}>대시보드</button></main>;
   const answered = current.questionIds.filter((id) => current.answers[id]?.length).length;
   const needsSource = !question.question.trim() || question.choices.length < 2;
   const displayChoices = question.choices.length ? question.choices : ['A', 'B', 'C', 'D'].map((key) => ({ key, text: '원본 PDF의 선택지를 확인하세요.' }));
-  return <div className="exam-shell"><header className="exam-header"><div><strong>{current.kind === 'normal' ? `Cycle ${current.cycleNumber}` : '오답노트'}</strong><span>Question {current.currentIndex + 1} / {questions.length}</span></div>{current.endAt && <div className={`timer ${remaining < 300 ? 'warning' : ''}`}><small>남은 시간</small><strong>{formatTime(remaining)}</strong></div>}<div className="save-controls"><span>{saving ? '저장 중…' : savedAt ? `${savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 저장됨` : '자동 저장 켜짐'}</span><button className="secondary" disabled={saving} onClick={() => void saveCheckpoint()}>중간 저장</button><button className="secondary exit-button" onClick={() => { if (confirm('현재 위치와 답안을 저장하고 대시보드로 나갈까요?')) void saveCheckpoint().then(onExit); }}>나가기</button></div></header>
+  const selectedNow = current.answers[question.id] ?? []; const revealed = current.kind !== 'normal' && selectedNow.length > 0 && (question.correctAnswers.length <= 1 || selectedNow.length === question.correctAnswers.length); const correctNow = revealed && answerIsCorrect(selectedNow, question.correctAnswers);
+  const examTitle = current.kind === 'normal' ? `Cycle ${current.cycleNumber}` : current.kind === 'practice' ? '전체 문제 연습' : '오답노트';
+  return <div className="exam-shell"><header className="exam-header"><div><strong>{examTitle}</strong><span>Question {current.currentIndex + 1} / {questions.length}</span></div>{current.endAt && <div className={`timer ${remaining < 300 ? 'warning' : ''}`}><small>남은 시간</small><strong>{formatTime(remaining)}</strong></div>}<div className="save-controls"><span>{saving ? '저장 중…' : savedAt ? `${savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 저장됨` : '자동 저장 켜짐'}</span><button className="secondary" disabled={saving} onClick={() => void saveCheckpoint()}>중간 저장</button><button className="secondary exit-button" onClick={() => { if (confirm('현재 위치와 답안을 저장하고 대시보드로 나갈까요?')) void saveCheckpoint().then(onExit); }}>나가기</button></div></header>
     <div className="progress"><span style={{ width: `${((current.currentIndex + 1) / questions.length) * 100}%` }} /></div><main className="exam-main"><aside className="navigator"><b>문제 번호</b><div>{questions.map((q, i) => <button key={q.id} className={`${i === current.currentIndex ? 'current' : ''} ${current.answers[q.id]?.length ? 'answered' : ''}`} onClick={() => void save({ ...currentRef.current, currentIndex: i })}>{i + 1}</button>)}</div><small>{answered}/{questions.length} 응답</small></aside>
-      <article className="question-panel"><span className="question-number">Question {question.originalNumber ?? current.currentIndex + 1}{question.correctAnswers.length > 1 && ' · 복수 선택'}</span><h2>{question.question || '원본 PDF에서 문제를 확인하세요.'}</h2>{bank.sourcePdf ? <SourcePages key={question.id} pdf={bank.sourcePdf} pages={question.sourcePages} questionNumber={question.originalNumber} initialOpen={needsSource} /> : <div className="source-unavailable"><strong>이 문제의 이미지·코드·선택지가 PDF에만 있습니다.</strong><span>진행 기록을 유지한 채 지금 원본을 연결하세요.</span><label className="button-label">원본 PDF 연결<input type="file" accept="application/pdf,.pdf" onChange={(event) => { const file = event.target.files?.[0]; if (file) void onAttachPdf(file); }} /></label></div>}<div className="choices">{displayChoices.map((choice) => { const checked = (current.answers[question.id] ?? []).includes(choice.key); return <label className={checked ? 'selected' : ''} key={choice.key}><input type={question.correctAnswers.length > 1 ? 'checkbox' : 'radio'} name={question.id} checked={checked} onChange={() => select(choice.key)} /><b>{choice.key}</b><span>{choice.text}</span></label>; })}</div>
+      <article className="question-panel"><span className="question-number">Question {question.originalNumber ?? current.currentIndex + 1}{question.correctAnswers.length > 1 && ' · 복수 선택'}</span><h2>{question.question || '원본 PDF에서 문제를 확인하세요.'}</h2>{bank.sourcePdf ? <SourcePages key={question.id} pdf={bank.sourcePdf} pages={question.sourcePages} questionNumber={question.originalNumber} initialOpen={needsSource} /> : <div className="source-unavailable"><strong>이 문제의 이미지·코드·선택지가 PDF에만 있습니다.</strong><span>진행 기록을 유지한 채 지금 원본을 연결하세요.</span><label className="button-label">원본 PDF 연결<input type="file" accept="application/pdf,.pdf" onChange={(event) => { const file = event.target.files?.[0]; if (file) void onAttachPdf(file); }} /></label></div>}<div className="choices">{displayChoices.map((choice) => { const checked = selectedNow.includes(choice.key); const stateClass = revealed ? question.correctAnswers.includes(choice.key) ? 'correct-choice' : checked ? 'wrong-choice' : '' : checked ? 'selected' : ''; return <label className={stateClass} key={choice.key}><input disabled={revealed} type={question.correctAnswers.length > 1 ? 'checkbox' : 'radio'} name={question.id} checked={checked} onChange={() => void select(choice.key)} /><b>{choice.key}</b><span>{choice.text}</span></label>; })}</div>{revealed && <div className={`instant-feedback ${correctNow ? 'correct' : 'incorrect'}`}><strong>{correctNow ? '정답입니다.' : `오답입니다. 정답: ${question.correctAnswers.join(', ') || '파싱되지 않음'}`}</strong>{question.explanation && <p>{question.explanation}</p>}</div>}
         <div className="exam-actions"><button className="secondary" disabled={!current.currentIndex} onClick={() => void save({ ...currentRef.current, currentIndex: currentRef.current.currentIndex - 1 })}>이전</button>{current.currentIndex < questions.length - 1 ? <button onClick={() => void save({ ...currentRef.current, currentIndex: currentRef.current.currentIndex + 1 })}>다음</button> : <button className="finish" onClick={() => confirm(`응답 ${answered}/${questions.length}. 시험을 제출할까요?`) && void onSubmit(currentRef.current)}>시험 종료</button>}</div></article></main>
   </div>;
 }
 
 function Result({ bank, result, onAttachPdf, onExport, onDashboard }: { bank: QuestionBank; result: CycleResult; onAttachPdf: (file: File) => void; onExport: () => void; onDashboard: () => void }) {
   const correct = result.results.filter((r) => r.correct).length; const unanswered = result.results.filter((r) => r.unanswered).length; const wrong = result.results.length - correct; const questions = new Map(bank.questions.map((q) => [q.id, q]));
-  return <section><div className="result-hero"><span>{result.kind === 'normal' ? `Cycle ${result.cycleNumber}` : '오답노트'} 완료</span><h1>{correct} / {result.results.length}</h1><strong>정답률 {result.results.length ? (correct / result.results.length * 100).toFixed(1) : '0.0'}%</strong><div><Metric label="정답" value={correct} /><Metric label="오답" value={wrong} warn={wrong > 0} /><Metric label="미응답" value={unanswered} /></div><div className="result-actions"><button onClick={onDashboard}>대시보드</button>{wrong > 0 && <button className="secondary" onClick={onExport}>틀린 문제 PDF 다운로드</button>}</div></div>
+  const resultTitle = result.kind === 'normal' ? `Cycle ${result.cycleNumber}` : result.kind === 'practice' ? '전체 문제 연습' : '오답노트';
+  return <section><div className="result-hero"><span>{resultTitle} 완료</span><h1>{correct} / {result.results.length}</h1><strong>정답률 {result.results.length ? (correct / result.results.length * 100).toFixed(1) : '0.0'}%</strong><div><Metric label="정답" value={correct} /><Metric label="오답" value={wrong} warn={wrong > 0} /><Metric label="미응답" value={unanswered} /></div><div className="result-actions"><button onClick={onDashboard}>대시보드</button>{wrong > 0 && <button className="secondary" onClick={onExport}>틀린 문제 PDF 다운로드</button>}</div></div>
     {!bank.sourcePdf && <div className="attach-pdf"><div><strong>이미지·코드를 보려면 원본 PDF를 연결하세요</strong><span>시험 결과와 진행 기록은 그대로 유지됩니다.</span></div><label className="button-label">원본 PDF 연결<input type="file" accept="application/pdf,.pdf" onChange={(event) => { const file = event.target.files?.[0]; if (file) void onAttachPdf(file); }} /></label></div>}
     <h2>문제별 결과</h2><div className="preview-list results">{result.results.map((item, i) => { const q = questions.get(item.questionId); if (!q) return null; return <details key={item.questionId}><summary><span>Question {q.originalNumber ?? i + 1}</span><span className={item.correct ? 'ok' : 'warning'}>{item.correct ? '정답' : item.unanswered ? '미응답' : '오답'}</span></summary><QuestionContent question={q} />{bank.sourcePdf && q.originalNumber != null && <SourcePages pdf={bank.sourcePdf} pages={q.sourcePages} questionNumber={q.originalNumber} />}<p><b>내 답:</b> {item.selected.join(', ') || '—'}<br /><b>정답:</b> {q.correctAnswers.join(', ') || '파싱되지 않음'}</p>{q.explanation && <p><b>해설</b><br />{q.explanation}</p>}</details>; })}</div>
   </section>;

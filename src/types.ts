@@ -7,7 +7,7 @@ export interface Question {
   rawText?: string; warnings?: ParsingWarning[];
 }
 export interface QuestionBank { id: string; name: string; sourceFileName: string; createdAt: string; questions: Question[]; sourcePdf?: Blob }
-export type ExamKind = 'normal' | 'wrong';
+export type ExamKind = 'normal' | 'wrong' | 'practice';
 export interface ExamSession {
   id: string; bankId: string; kind: ExamKind; cycleNumber?: number; questionIds: string[];
   answers: Record<string, string[]>; currentIndex: number; startedAt: string; updatedAt?: string; endAt?: string; status: 'active' | 'submitted';

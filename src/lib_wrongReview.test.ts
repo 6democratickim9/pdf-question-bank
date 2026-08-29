@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advanceWrongReviewQueue } from './wrongReview';
+import { advanceWrongReviewQueue } from './lib_wrongReview';
 
 describe('advanceWrongReviewQueue', () => {
   it('틀린 문제를 현재 위치에서 제거하고 맨 뒤로 보낸다', () => {
