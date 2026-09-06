@@ -1,5 +1,17 @@
 # PDF Question Bank
 
+## DVA-C02 AI analysis endpoint
+
+Set `VITE_DVA_ANALYSIS_ENDPOINT` before starting the app. The Study dashboard sends one question per request as JSON:
+
+```json
+{ "question": "...", "choices": [{ "key": "A", "text": "..." }], "correctAnswers": ["D"], "originalExplanation": "..." }
+```
+
+The endpoint must return `{ "analysis": { ... } }` using the DVA schema in `src/types.ts`. The app validates DVA PART, taxonomy pattern, difficulty, and distractor data before persisting it locally. Set `problemPattern` to `OTHER` with `suggestedPattern` when the taxonomy has no exact match. Failed questions remain marked `failed` and can be retried without reprocessing completed questions.
+
+The original answer and explanation are never overwritten. Analysis is optional, so existing locally stored question banks continue to work as `Not analyzed`.
+
 브라우저 안에서 PDF 문제집을 분석하고 시험·오답노트를 관리하는 로컬 우선 React 앱입니다. PDF와 문제 내용은 외부 서버로 전송되지 않으며 모든 진행 상황은 IndexedDB에 저장됩니다.
 
 ## 시작하기

@@ -6,10 +6,12 @@ import { exportWrongAnswers } from './lib/exportWrongAnswers';
 import { extractPdfText } from './lib/pdf/extractPdfText';
 import { parsePdfQuestions } from './lib/pdf/parsePdfQuestions';
 import { cleanQuestionText } from './lib/pdf/cleanQuestionText';
+import { recordWrongAttempt, updateMastery } from './lib/study';
 import WrongReviewExam from './WrongReviewExam';
-import type { BankStatistics, CycleResult, ExamSession, Question, QuestionBank } from './types';
+import { AnalysisControls, StatsPage, StudyPage, WrongPage } from './StudyViews';
+import type { BankStatistics, CycleResult, ExamSession, Question, QuestionBank, WrongReviewItem } from './types';
 
-type View = 'banks' | 'upload' | 'preview' | 'dashboard' | 'exam' | 'result';
+type View = 'banks' | 'upload' | 'preview' | 'dashboard' | 'study' | 'wrong' | 'stats' | 'exam' | 'result';
 const blankStats = (bankId: string): BankStatistics => ({ bankId, completedQuestionIds: [], completedCycles: [] });
 const formatTime = (seconds: number) => [Math.floor(seconds / 3600), Math.floor(seconds % 3600 / 60), seconds % 60].map((v) => String(v).padStart(2, '0')).join(':');
 const savedAnswerCount = (session: ExamSession) => Object.values(session.answers).filter((answers) => answers.length).length;
@@ -24,6 +26,7 @@ export default function App() {
   const [sourceName, setSourceName] = useState(''); const [sourcePdf, setSourcePdf] = useState<File>(); const [loading, setLoading] = useState(''); const [error, setError] = useState('');
   const [sessions, setSessions] = useState<ExamSession[]>([]); const [results, setResults] = useState<CycleResult[]>([]);
   const [wrongIds, setWrongIds] = useState<string[]>([]); const [stats, setStats] = useState<BankStatistics>();
+  const [wrongHistory, setWrongHistory] = useState<WrongReviewItem[]>([]);
   const [session, setSession] = useState<ExamSession>(); const [result, setResult] = useState<CycleResult>();
 
   const refreshBanks = async () => setBanks((await db.banks()).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
@@ -40,8 +43,8 @@ export default function App() {
   };
   const loadDashboard = async (selected: QuestionBank) => {
     const cleaned = await cleanStoredBank(selected);
-    const [ss, rr, wrong, storedStats] = await Promise.all([db.sessions(cleaned.id), db.results(cleaned.id), db.wrong(cleaned.id), db.stats(cleaned.id)]);
-    setBank(cleaned); setSessions(ss); setResults(rr); setWrongIds(wrong?.questionIds ?? []); setStats(storedStats ?? blankStats(cleaned.id)); setView('dashboard');
+    const [ss, rr, wrong, storedStats, history] = await Promise.all([db.sessions(cleaned.id), db.results(cleaned.id), db.wrong(cleaned.id), db.stats(cleaned.id), db.wrongHistory(cleaned.id)]);
+    setBank(cleaned); setSessions(ss); setResults(rr); setWrongIds(wrong?.questionIds ?? []); setStats(storedStats ?? blankStats(cleaned.id)); setWrongHistory(history); setView('dashboard');
   };
   const openBank = async (selected: QuestionBank) => {
     const cleaned = await cleanStoredBank(selected);
@@ -69,8 +72,13 @@ export default function App() {
     if (!bank) return; const set = new Set(wrongIds); const next = createSession(bank.id, 'wrong', bank.questions.filter((q) => set.has(q.id)));
     await db.saveSession(next); setSession(next); setView('exam');
   };
+  const startWrongQuestions = async (questions: Question[]) => { if (!bank || !questions.length) return; const next = createSession(bank.id, 'wrong', questions); await db.saveSession(next); setSession(next); setView('exam'); };
   const startPractice = async () => {
     if (!bank) return; const next = createSession(bank.id, 'practice', bank.questions);
+    await db.saveSession(next); setSession(next); setView('exam');
+  };
+  const startFocused = async (questions: Question[]) => {
+    if (!bank || !questions.length) return; const next = createSession(bank.id, 'practice', questions);
     await db.saveSession(next); setSession(next); setView('exam');
   };
   const applyImmediateGrade = async (questionId: string, correct: boolean, kind: ExamSession['kind']) => {
@@ -90,26 +98,32 @@ export default function App() {
     let updatedWrong = new Set(wrongIds);
     if (submitted.kind === 'normal') graded.results.filter((r) => !r.correct).forEach((r) => updatedWrong.add(r.questionId));
     else if (submitted.kind === 'wrong') graded.results.forEach((r) => r.correct ? updatedWrong.delete(r.questionId) : updatedWrong.add(r.questionId));
-    const updatedStats: BankStatistics = { bankId: bank.id,
+    let updatedStats: BankStatistics = { bankId: bank.id,
       completedQuestionIds: [...new Set([...(stats?.completedQuestionIds ?? []), ...(submitted.kind === 'normal' ? submitted.questionIds : [])])],
       completedCycles: [...new Set([...(stats?.completedCycles ?? []), ...(submitted.kind === 'normal' && submitted.cycleNumber ? [submitted.cycleNumber] : [])])] };
-    await Promise.all([db.saveSession(closed), db.saveResult(graded), db.saveWrong({ bankId: bank.id, questionIds: [...updatedWrong] }), db.saveStats(updatedStats)]);
+    const existingHistory = await db.wrongHistory(bank.id); const historyMap = new Map(existingHistory.map((item) => [item.questionId, item])); const historyWrites = [];
+    for (const item of graded.results) { const question = bank.questions.find((q) => q.id === item.questionId); if (!question) continue; updatedStats = updateMastery(updatedStats, question, item.correct); if (!item.correct || historyMap.has(item.questionId)) historyWrites.push(db.saveWrongHistory(recordWrongAttempt(historyMap.get(item.questionId), bank.id, question, item.selected, item.correct))); }
+    await Promise.all([db.saveSession(closed), db.saveResult(graded), db.saveWrong({ bankId: bank.id, questionIds: [...updatedWrong] }), db.saveStats(updatedStats), ...historyWrites]);
     setSession(closed); setResult(graded); setWrongIds([...updatedWrong]); setStats(updatedStats); setView('result');
   };
 
   if (view === 'upload') return <Shell><Upload loading={loading} error={error} onFile={parseFile} onBack={() => setView('banks')} /></Shell>;
   if (view === 'preview') return <Shell><Preview questions={preview} fileName={sourceName} onSave={savePreview} onBack={() => setView('upload')} /></Shell>;
-  if (view === 'dashboard' && bank) return <Shell><Dashboard bank={bank} sessions={sessions} results={results} wrongIds={wrongIds} stats={stats ?? blankStats(bank.id)} onAttachPdf={attachSourcePdf} onResume={(active) => { setSession(active); setView('exam'); }} onCycle={startNormal} onPractice={startPractice} onWrong={startWrong} onBack={() => { void refreshBanks(); setView('banks'); }} onReset={async (kind) => {
+  const nav = (next: 'dashboard' | 'study' | 'wrong' | 'stats') => setView(next);
+  if (view === 'dashboard' && bank) return <Shell bank={bank} view={view} onNavigate={nav}><AnalysisControls bank={bank} onUpdated={setBank} /><Dashboard bank={bank} sessions={sessions} results={results} wrongIds={wrongIds} stats={stats ?? blankStats(bank.id)} onAttachPdf={attachSourcePdf} onResume={(active) => { setSession(active); setView('exam'); }} onCycle={startNormal} onPractice={startPractice} onWrong={() => setView('wrong')} onBack={() => { void refreshBanks(); setView('banks'); }} onReset={async (kind) => {
     if (kind === 'progress') await db.resetProgress(bank.id); if (kind === 'wrong') await db.saveWrong({ bankId: bank.id, questionIds: [] });
     if (kind === 'delete') { await db.deleteBank(bank.id); await refreshBanks(); setView('banks'); return; } await loadDashboard(bank);
   }} /></Shell>;
+  if (view === 'study' && bank) return <Shell bank={bank} view={view} onNavigate={nav}><StudyPage bank={bank} stats={stats ?? blankStats(bank.id)} onStart={startFocused} /></Shell>;
+  if (view === 'wrong' && bank) return <Shell bank={bank} view={view} onNavigate={nav}><WrongPage bank={bank} history={wrongHistory} onStart={startWrongQuestions} /></Shell>;
+  if (view === 'stats' && bank) return <Shell bank={bank} view={view} onNavigate={nav}><StatsPage bank={bank} stats={stats ?? blankStats(bank.id)} history={wrongHistory} onStart={startFocused} /></Shell>;
   if (view === 'exam' && bank && session?.kind === 'wrong') return <WrongReviewExam bank={bank} initial={session} onAttachPdf={attachSourcePdf} onExit={() => loadDashboard(bank)} />;
   if (view === 'exam' && bank && session) return <Exam bank={bank} initial={session} onAttachPdf={attachSourcePdf} onImmediateGrade={applyImmediateGrade} onSubmit={submit} onExit={() => loadDashboard(bank)} />;
   if (view === 'result' && bank && result) return <Shell><Result bank={bank} result={result} onAttachPdf={attachSourcePdf} onExport={() => exportWrongAnswers(bank, result)} onDashboard={() => loadDashboard(bank)} /></Shell>;
   return <Shell><BankList banks={banks} onOpen={openBank} onAdd={() => setView('upload')} /></Shell>;
 }
 
-function Shell({ children }: { children: React.ReactNode }) { return <><header><div className="brand">PDF Question Bank</div><span className="privacy">🔒 PDF는 브라우저 밖으로 전송되지 않습니다</span></header><main>{children}</main></>; }
+function Shell({ children, bank, view, onNavigate }: { children: React.ReactNode; bank?: QuestionBank; view?: View; onNavigate?: (view: 'dashboard' | 'study' | 'wrong' | 'stats') => void }) { return <><header><div className="brand">PDF Question Bank</div>{bank && onNavigate ? <nav className="top-nav"><button className={view === 'dashboard' ? 'active' : ''} onClick={() => onNavigate('dashboard')}>Dashboard</button><button onClick={() => onNavigate('dashboard')}>Exam</button><button className={view === 'study' ? 'active' : ''} onClick={() => onNavigate('study')}>Study</button><button onClick={() => onNavigate('wrong')}>Wrong</button><button className={view === 'stats' ? 'active' : ''} onClick={() => onNavigate('stats')}>Stats</button></nav> : <span className="privacy">🔒 PDF는 브라우저 밖으로 전송되지 않습니다</span>}</header><main>{children}</main></>; }
 function BankList({ banks, onOpen, onAdd }: { banks: QuestionBank[]; onOpen: (b: QuestionBank) => void; onAdd: () => void }) {
   return <section><div className="title-row"><div><h1>My Question Banks</h1><p className="muted">로컬에 저장된 문제은행</p></div><button onClick={onAdd}>새 PDF 추가</button></div>
     {!banks.length ? <div className="empty"><h2>첫 문제은행을 만들어 보세요</h2><p>정답과 해설이 포함된 PDF를 분석해 시험을 시작할 수 있습니다.</p><button onClick={onAdd}>PDF 선택</button></div> : <div className="cards">{banks.map((b) => <button className="bank-card" key={b.id} onClick={() => onOpen(b)}><strong>{b.name}</strong><span>{b.questions.length.toLocaleString()} Questions</span><small>{new Date(b.createdAt).toLocaleDateString()}</small></button>)}</div>}

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { db } from './lib/db';
 import { answerIsCorrect } from './lib/exam';
 import { advanceWrongReviewQueue } from './lib/wrongReview';
+import { recordWrongAttempt, relatedQuestionScores, updateMastery } from './lib/study';
+import { StudyAnalysis } from './StudyViews';
 import type { ExamSession, Question, QuestionBank } from './types';
 
 interface WrongReviewExamProps {
@@ -31,6 +33,7 @@ export default function WrongReviewExam({
     () => initial.updatedAt ? new Date(initial.updatedAt) : null,
   );
   const [saving, setSaving] = useState(false);
+  const [adaptive, setAdaptive] = useState(true);
 
   const currentRef = useRef(initial);
   const writeQueue = useRef(Promise.resolve());
@@ -120,12 +123,16 @@ export default function WrongReviewExam({
 
     // 맞으면 큐에서 제거
     // 틀리면 현재 자리에서 제거한 뒤 맨 뒤에 다시 추가
-    const transition = advanceWrongReviewQueue(
+    let transition = advanceWrongReviewQueue(
       base.questionIds,
       base.currentIndex,
       liveQuestion.id,
       correct,
     );
+    if (!correct && adaptive) {
+      const relatedIds = relatedQuestionScores(liveQuestion, bank.questions).slice(0, 2).map(({ question: related }) => related.id).filter((id) => !transition.questionIds.includes(id));
+      if (relatedIds.length) { const originalIndex = transition.questionIds.lastIndexOf(liveQuestion.id); const questionIds = [...transition.questionIds]; questionIds.splice(Math.max(0, originalIndex), 0, ...relatedIds); transition = { ...transition, questionIds }; }
+    }
 
     // 다음에 재출제될 때는 답을 새로 고르도록 기존 답안 제거
     const answers = { ...base.answers };
@@ -142,6 +149,9 @@ export default function WrongReviewExam({
     const storedWrong = new Set(
       (await db.wrong(bank.id))?.questionIds ?? [],
     );
+    const [history, storedStats] = await Promise.all([db.wrongHistory(bank.id), db.stats(bank.id)]);
+    const historyItem = recordWrongAttempt(history.find((item) => item.questionId === liveQuestion.id), bank.id, liveQuestion, selected, correct);
+    const nextStats = updateMastery(storedStats ?? { bankId: bank.id, completedQuestionIds: [], completedCycles: [] }, liveQuestion, correct);
 
     if (correct) storedWrong.delete(liveQuestion.id);
     else storedWrong.add(liveQuestion.id);
@@ -152,6 +162,8 @@ export default function WrongReviewExam({
         bankId: bank.id,
         questionIds: [...storedWrong],
       }),
+      db.saveWrongHistory(historyItem),
+      db.saveStats(nextStats),
     ]);
 
     // 여기서 다음 문제로 자동 이동하지 않습니다.
@@ -288,6 +300,7 @@ export default function WrongReviewExam({
             <br />
             다음 문제
           </small>
+          <label className="adaptive-toggle"><input type="checkbox" checked={adaptive} onChange={(event) => setAdaptive(event.target.checked)} /> Adaptive Review</label><small>{adaptive ? '관련 문제 후 원래 문제 재출제' : 'Same Question Only'}</small>
         </aside>
 
         <article className="question-panel">
@@ -426,12 +439,16 @@ export default function WrongReviewExam({
                 )}
               </div>
 
+              <StudyAnalysis question={question} bank={bank} />
+
               {!feedback.correct && (
                 <div className="requeue-notice">
                   ↻ 이 문제는 오답 큐 맨 뒤로 이동했습니다.
                   한 바퀴 뒤에 다시 출제됩니다.
                 </div>
               )}
+
+              {!feedback.correct && relatedQuestionScores(question, bank.questions).length > 0 && <div className="requeue-notice">같은 개념의 관련 문제 {relatedQuestionScores(question, bank.questions).slice(0, 3).map(({ question: q }) => `Q${q.originalNumber ?? q.id}`).join(', ')}를 Study에서 함께 복습할 수 있습니다.</div>}
 
               <div className="exam-actions wrong-next-actions">
                 <button
