@@ -19,6 +19,11 @@ export function relatedQuestionScores(source: Question, questions: Question[]) {
   }).filter(({ score }) => score > 0).sort((a, b) => b.score - a.score || a.question.id.localeCompare(b.question.id));
 }
 
+export function questionsForWrongQueue(questions: Question[], wrongIds: string[]) {
+  const wrongIdSet = new Set(wrongIds);
+  return questions.filter((question) => wrongIdSet.has(question.id));
+}
+
 export function updateMastery(stats: BankStatistics, question: Question, correct: boolean): BankStatistics {
   const update = (records: Record<string, MasteryRecord> | undefined, key?: string) => {
     if (!key) return records ?? {};

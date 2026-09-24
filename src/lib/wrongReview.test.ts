@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { advanceWrongReviewQueue } from './wrongReview';
+import {
+  advanceWrongReviewQueue,
+  continueWrongReviewSession,
+  openWrongReviewQuestion,
+  synchronizeWrongReviewSession,
+} from './wrongReview';
+import type { ExamSession } from '../types';
 
 describe('advanceWrongReviewQueue', () => {
   it('틀린 문제를 현재 위치에서 제거하고 맨 뒤로 보낸다', () => {
@@ -39,6 +45,83 @@ describe('advanceWrongReviewQueue', () => {
       questionIds: [],
       currentIndex: 0,
       finished: true,
+    });
+  });
+});
+
+describe('synchronizeWrongReviewSession', () => {
+  it('기존의 일부 큐를 저장된 전체 오답 큐로 확장한다', () => {
+    const session: ExamSession = {
+      id: 'session-1', bankId: 'bank-1', kind: 'wrong',
+      questionIds: ['c'], answers: {}, currentIndex: 0,
+      startedAt: '2026-09-24T00:00:00.000Z', status: 'active',
+    };
+    expect(synchronizeWrongReviewSession(session, ['a', 'b', 'c', 'd'], ['a', 'c', 'd'])).toMatchObject({
+      questionIds: ['c', 'a', 'd'], currentIndex: 0, status: 'active',
+    });
+  });
+
+  it('더 이상 오답이 아닌 문제는 복구 큐에서 제거한다', () => {
+    const session: ExamSession = {
+      id: 'session-1', bankId: 'bank-1', kind: 'wrong',
+      questionIds: ['a', 'b'], answers: {}, currentIndex: 1,
+      startedAt: '2026-09-24T00:00:00.000Z', status: 'active',
+    };
+    expect(synchronizeWrongReviewSession(session, ['a', 'b', 'c'], ['a', 'c'])).toMatchObject({
+      questionIds: ['a', 'c'], currentIndex: 0, status: 'active',
+    });
+  });
+});
+
+describe('continueWrongReviewSession', () => {
+  it('메인 화면으로 나가지 않고 현재 세션의 큐를 다시 순환한다', () => {
+    const completed: ExamSession = {
+      id: 'session-1',
+      bankId: 'bank-1',
+      kind: 'wrong',
+      questionIds: [],
+      answers: { a: ['A'] },
+      currentIndex: 2,
+      startedAt: '2026-09-24T00:00:00.000Z',
+      status: 'submitted',
+    };
+
+    expect(continueWrongReviewSession(completed, ['a', 'b'])).toEqual({
+      ...completed,
+      questionIds: ['a', 'b'],
+      answers: {},
+      currentIndex: 0,
+      status: 'active',
+    });
+  });
+});
+
+describe('openWrongReviewQuestion', () => {
+  const session: ExamSession = {
+    id: 'session-1',
+    bankId: 'bank-1',
+    kind: 'wrong',
+    questionIds: ['a', 'b'],
+    answers: { a: ['A'], c: ['C'] },
+    currentIndex: 1,
+    startedAt: '2026-09-24T00:00:00.000Z',
+    status: 'active',
+  };
+
+  it('현재 큐에 있는 관련 문제 위치로 이동한다', () => {
+    expect(openWrongReviewQuestion(session, 'a')).toEqual({
+      ...session,
+      currentIndex: 0,
+      answers: { c: ['C'] },
+    });
+  });
+
+  it('현재 큐에 없는 관련 문제를 현재 위치에 넣고 이동한다', () => {
+    expect(openWrongReviewQuestion(session, 'c')).toEqual({
+      ...session,
+      questionIds: ['a', 'c', 'b'],
+      currentIndex: 1,
+      answers: { a: ['A'] },
     });
   });
 });

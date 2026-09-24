@@ -7,6 +7,7 @@ import { extractPdfText } from './lib/pdf/extractPdfText';
 import { parsePdfQuestions } from './lib/pdf/parsePdfQuestions';
 import { cleanQuestionText } from './lib/pdf/cleanQuestionText';
 import { recordWrongAttempt, updateMastery } from './lib/study';
+import { mergeLocalDvaAnalysis } from './lib/localAnalysis';
 import WrongReviewExam from './WrongReviewExam';
 import { AnalysisControls, StatsPage, StudyPage, WrongPage } from './StudyViews';
 import type { BankStatistics, CycleResult, ExamSession, Question, QuestionBank, WrongReviewItem } from './types';
@@ -32,14 +33,14 @@ export default function App() {
   const refreshBanks = async () => setBanks((await db.banks()).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
   useEffect(() => { void refreshBanks(); }, []);
   const cleanStoredBank = async (stored: QuestionBank) => {
-    let changed = false;
-    const questions = stored.questions.map((question) => {
+    const withLocalAnalysis = await mergeLocalDvaAnalysis(stored); let changed = withLocalAnalysis !== stored;
+    const questions = withLocalAnalysis.questions.map((question) => {
       const cleaned = cleanQuestionText(question.question);
       if (cleaned === question.question) return question;
       changed = true; return { ...question, question: cleaned };
     });
-    if (!changed) return stored;
-    const cleanedBank = { ...stored, questions }; await db.saveBank(cleanedBank); return cleanedBank;
+    if (!changed) return withLocalAnalysis;
+    const cleanedBank = { ...withLocalAnalysis, questions }; await db.saveBank(cleanedBank); return cleanedBank;
   };
   const loadDashboard = async (selected: QuestionBank) => {
     const cleaned = await cleanStoredBank(selected);
@@ -83,9 +84,8 @@ export default function App() {
   };
   const applyImmediateGrade = async (questionId: string, correct: boolean, kind: ExamSession['kind']) => {
     if (!bank || kind === 'normal') return;
-    const stored = await db.wrong(bank.id); const updated = new Set(stored?.questionIds ?? wrongIds);
-    if (!correct) updated.add(questionId); else if (kind === 'wrong') updated.delete(questionId);
-    const questionIds = [...updated]; await db.saveWrong({ bankId: bank.id, questionIds }); setWrongIds(questionIds);
+    if (correct && kind !== 'wrong') return;
+    const questionIds = await db.updateWrongQuestion(bank.id, questionId, correct); setWrongIds(questionIds);
   };
   const attachSourcePdf = async (file: File) => {
     if (!bank) return;
@@ -115,7 +115,7 @@ export default function App() {
     if (kind === 'delete') { await db.deleteBank(bank.id); await refreshBanks(); setView('banks'); return; } await loadDashboard(bank);
   }} /></Shell>;
   if (view === 'study' && bank) return <Shell bank={bank} view={view} onNavigate={nav}><StudyPage bank={bank} stats={stats ?? blankStats(bank.id)} onStart={startFocused} /></Shell>;
-  if (view === 'wrong' && bank) return <Shell bank={bank} view={view} onNavigate={nav}><WrongPage bank={bank} history={wrongHistory} onStart={startWrongQuestions} /></Shell>;
+  if (view === 'wrong' && bank) return <Shell bank={bank} view={view} onNavigate={nav}><WrongPage bank={bank} history={wrongHistory} wrongIds={wrongIds} onStart={startWrongQuestions} /></Shell>;
   if (view === 'stats' && bank) return <Shell bank={bank} view={view} onNavigate={nav}><StatsPage bank={bank} stats={stats ?? blankStats(bank.id)} history={wrongHistory} onStart={startFocused} /></Shell>;
   if (view === 'exam' && bank && session?.kind === 'wrong') return <WrongReviewExam bank={bank} initial={session} onAttachPdf={attachSourcePdf} onExit={() => loadDashboard(bank)} />;
   if (view === 'exam' && bank && session) return <Exam bank={bank} initial={session} onAttachPdf={attachSourcePdf} onImmediateGrade={applyImmediateGrade} onSubmit={submit} onExit={() => loadDashboard(bank)} />;

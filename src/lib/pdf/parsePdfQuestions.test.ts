@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { parsePdfQuestions } from './parsePdfQuestions';
 
 describe('PDF question parser', () => {
+  it('Q. 형식에서는 선택지 내부의 번호 목록을 새 문제로 오인하지 않는다', () => {
+    const [q] = parsePdfQuestions([{ pageNumber: 1, text: 'Q. 418 DVA-C02\n올바른 단계는?\nA. 1. 빌드한다.\n2. 패키징한다.\n3. 배포한다.\nB. 다른 순서\n정답 및 해설\n정답 A\nA가 올바르다.' }]);
+    expect(q.originalNumber).toBe(418); expect(q.choices).toHaveLength(2); expect(q.correctAnswers).toEqual(['A']);
+  });
   it('parses a complete question', () => {
     const [q] = parsePdfQuestions([{ pageNumber: 1, text: 'Question 1\nWhat is correct?\nA. One\nB. Two\nCorrect Answer: B\nExplanation: Because.' }]);
     expect(q.question).toBe('What is correct?'); expect(q.choices).toHaveLength(2); expect(q.correctAnswers).toEqual(['B']);

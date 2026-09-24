@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { db } from './lib/db';
 import { answerIsCorrect } from './lib/exam';
-import { advanceWrongReviewQueue } from './lib/wrongReview';
+import {
+  advanceWrongReviewQueue,
+  continueWrongReviewSession,
+  openWrongReviewQuestion,
+  synchronizeWrongReviewSession,
+} from './lib/wrongReview';
 import { recordWrongAttempt, relatedQuestionScores, updateMastery } from './lib/study';
 import { StudyAnalysis } from './StudyViews';
 import type { ExamSession, Question, QuestionBank } from './types';
@@ -33,7 +38,6 @@ export default function WrongReviewExam({
     () => initial.updatedAt ? new Date(initial.updatedAt) : null,
   );
   const [saving, setSaving] = useState(false);
-  const [adaptive, setAdaptive] = useState(true);
 
   const currentRef = useRef(initial);
   const writeQueue = useRef(Promise.resolve());
@@ -83,6 +87,20 @@ export default function WrongReviewExam({
 
   const saveCheckpoint = async () => saveSession(currentRef.current);
 
+  useEffect(() => {
+    let cancelled = false;
+    void db.wrong(bank.id).then((stored) => {
+      if (cancelled) return;
+      const synchronized = synchronizeWrongReviewSession(
+        currentRef.current,
+        bank.questions.map((item) => item.id),
+        stored?.questionIds ?? [],
+      );
+      return saveSession(synchronized);
+    });
+    return () => { cancelled = true; };
+  }, [bank.id, bank.questions]);
+
   const toggleAnswer = (key: string) => {
     if (!liveQuestion || feedback) return;
 
@@ -129,10 +147,6 @@ export default function WrongReviewExam({
       liveQuestion.id,
       correct,
     );
-    if (!correct && adaptive) {
-      const relatedIds = relatedQuestionScores(liveQuestion, bank.questions).slice(0, 2).map(({ question: related }) => related.id).filter((id) => !transition.questionIds.includes(id));
-      if (relatedIds.length) { const originalIndex = transition.questionIds.lastIndexOf(liveQuestion.id); const questionIds = [...transition.questionIds]; questionIds.splice(Math.max(0, originalIndex), 0, ...relatedIds); transition = { ...transition, questionIds }; }
-    }
 
     // 다음에 재출제될 때는 답을 새로 고르도록 기존 답안 제거
     const answers = { ...base.answers };
@@ -146,22 +160,13 @@ export default function WrongReviewExam({
       status: transition.finished ? 'submitted' : 'active',
     };
 
-    const storedWrong = new Set(
-      (await db.wrong(bank.id))?.questionIds ?? [],
-    );
     const [history, storedStats] = await Promise.all([db.wrongHistory(bank.id), db.stats(bank.id)]);
     const historyItem = recordWrongAttempt(history.find((item) => item.questionId === liveQuestion.id), bank.id, liveQuestion, selected, correct);
     const nextStats = updateMastery(storedStats ?? { bankId: bank.id, completedQuestionIds: [], completedCycles: [] }, liveQuestion, correct);
 
-    if (correct) storedWrong.delete(liveQuestion.id);
-    else storedWrong.add(liveQuestion.id);
-
     await Promise.all([
       saveSession(nextSession),
-      db.saveWrong({
-        bankId: bank.id,
-        questionIds: [...storedWrong],
-      }),
+      db.updateWrongQuestion(bank.id, liveQuestion.id, correct),
       db.saveWrongHistory(historyItem),
       db.saveStats(nextStats),
     ]);
@@ -179,13 +184,31 @@ export default function WrongReviewExam({
 
   const nextQuestion = () => {
     if (!feedback) return;
-
-    const finished = feedback.finished;
     setFeedback(null);
+  };
 
-    if (finished) {
-      onExit();
-    }
+  const continueReview = async () => {
+    const stored = await db.wrong(bank.id);
+    const allWrongQuestionIds = bank.questions
+      .filter((item) => stored?.questionIds.includes(item.id))
+      .map((item) => item.id);
+    const continued = continueWrongReviewSession(
+      currentRef.current,
+      allWrongQuestionIds,
+    );
+
+    await saveSession(continued);
+    setFeedback(null);
+  };
+
+  const openRelatedQuestion = async (related: Question) => {
+    const next = openWrongReviewQuestion(
+      currentRef.current,
+      related.id,
+    );
+
+    await saveSession(next);
+    setFeedback(null);
   };
 
   if (!question) {
@@ -217,6 +240,16 @@ export default function WrongReviewExam({
         key,
         text: '원본 PDF의 선택지를 확인하세요.',
       }));
+
+  const queuedQuestionIds = new Set(current.questionIds);
+  const relatedQueuedQuestions = feedback
+    ? relatedQuestionScores(
+        question,
+        bank.questions.filter((candidate) =>
+          queuedQuestionIds.has(candidate.id),
+        ),
+      )
+    : [];
 
   return (
     <div className="exam-shell">
@@ -300,7 +333,6 @@ export default function WrongReviewExam({
             <br />
             다음 문제
           </small>
-          <label className="adaptive-toggle"><input type="checkbox" checked={adaptive} onChange={(event) => setAdaptive(event.target.checked)} /> Adaptive Review</label><small>{adaptive ? '관련 문제 후 원래 문제 재출제' : 'Same Question Only'}</small>
         </aside>
 
         <article className="question-panel">
@@ -313,6 +345,29 @@ export default function WrongReviewExam({
             {question.question ||
               '원본 PDF에서 문제를 확인하세요.'}
           </h2>
+
+          {feedback && (
+            <div
+              className={`answer-verdict ${
+                feedback.correct ? 'correct' : 'incorrect'
+              }`}
+              role="status"
+              aria-live="polite"
+            >
+              <strong>
+                {feedback.correct
+                  ? '✓ 정답입니다'
+                  : '✕ 오답입니다'}
+              </strong>
+              <span>
+                {feedback.finished
+                  ? '현재 오답을 모두 해결했습니다.'
+                  : feedback.correct
+                    ? `남은 오답 ${feedback.remaining}개`
+                    : '이 문제는 오답 큐 맨 뒤에서 다시 출제됩니다.'}
+              </span>
+            </div>
+          )}
 
           {bank.sourcePdf ? (
             <ReviewSourcePages
@@ -397,19 +452,7 @@ export default function WrongReviewExam({
           )}
 
           {feedback && (
-            <section
-              className={`instant-feedback ${
-                feedback.correct
-                  ? 'instant-feedback-correct'
-                  : 'instant-feedback-wrong'
-              }`}
-            >
-              <div className="instant-feedback-title">
-                {feedback.correct
-                  ? '✓ 정답입니다'
-                  : '✕ 오답입니다'}
-              </div>
-
+            <section className="answer-details">
               <div className="instant-answer-grid">
                 <div>
                   <span>내 답</span>
@@ -427,19 +470,12 @@ export default function WrongReviewExam({
                 </div>
               </div>
 
-              <div className="instant-explanation">
-                <span>해설</span>
-
-                {question.explanation?.trim() ? (
-                  <p>{question.explanation}</p>
-                ) : (
-                  <p className="muted">
-                    이 문제에는 저장된 해설이 없습니다.
-                  </p>
-                )}
-              </div>
-
-              <StudyAnalysis question={question} bank={bank} />
+              <StudyAnalysis
+                question={question}
+                bank={bank}
+                candidateQuestionIds={current.questionIds}
+                onOpen={(related) => void openRelatedQuestion(related)}
+              />
 
               {!feedback.correct && (
                 <div className="requeue-notice">
@@ -448,17 +484,48 @@ export default function WrongReviewExam({
                 </div>
               )}
 
-              {!feedback.correct && relatedQuestionScores(question, bank.questions).length > 0 && <div className="requeue-notice">같은 개념의 관련 문제 {relatedQuestionScores(question, bank.questions).slice(0, 3).map(({ question: q }) => `Q${q.originalNumber ?? q.id}`).join(', ')}를 Study에서 함께 복습할 수 있습니다.</div>}
+              {!feedback.correct && relatedQueuedQuestions.length > 0 && (
+                <div className="requeue-notice">
+                  현재 오답 큐의 관련 문제{' '}
+                  {relatedQueuedQuestions
+                    .slice(0, 3)
+                    .map(
+                      ({ question: related }) =>
+                        `Q${related.originalNumber ?? related.id}`,
+                    )
+                    .join(', ')}
+                  를 이어서 복습할 수 있습니다.
+                </div>
+              )}
 
               <div className="exam-actions wrong-next-actions">
-                <button
-                  className="finish"
-                  onClick={nextQuestion}
-                >
-                  {feedback.finished
-                    ? '오답노트 완료 → 대시보드'
-                    : '다음 문제'}
-                </button>
+                {feedback.finished ? (
+                  <>
+                    <button
+                      className="finish"
+                      disabled={saving}
+                      onClick={() => void continueReview()}
+                    >
+                      계속 풀기
+                    </button>
+                    <button className="secondary" onClick={onExit}>
+                      처음부터 다시
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button className="finish" onClick={nextQuestion}>
+                      계속 풀기
+                    </button>
+                    <button
+                      className="secondary"
+                      disabled={saving}
+                      onClick={() => void continueReview()}
+                    >
+                      처음부터 풀기
+                    </button>
+                  </>
+                )}
               </div>
             </section>
           )}

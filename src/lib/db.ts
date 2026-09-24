@@ -47,6 +47,19 @@ export const db = {
   saveResult: async (value: CycleResult) => (await database).put('cycleResults', value),
   wrong: async (bankId: string) => (await database).get('wrongAnswers', bankId),
   saveWrong: async (value: WrongAnswers) => (await database).put('wrongAnswers', value),
+  updateWrongQuestion: async (bankId: string, questionId: string, correct: boolean) => {
+    const d = await database;
+    const tx = d.transaction('wrongAnswers', 'readwrite');
+    const store = tx.objectStore('wrongAnswers');
+    const stored = await store.get(bankId);
+    const questionIds = new Set(stored?.questionIds ?? []);
+    if (correct) questionIds.delete(questionId);
+    else questionIds.add(questionId);
+    const updated = [...questionIds];
+    await store.put({ bankId, questionIds: updated });
+    await tx.done;
+    return updated;
+  },
   stats: async (bankId: string) => (await database).get('statistics', bankId),
   saveStats: async (value: BankStatistics) => (await database).put('statistics', value),
   wrongHistory: async (bankId: string) => (await database).getAllFromIndex('wrongHistory', 'by-bank', bankId),

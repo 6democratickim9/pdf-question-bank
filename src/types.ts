@@ -4,7 +4,7 @@ export interface Choice { key: string; text: string }
 export type AnalysisStatus = 'pending' | 'analyzing' | 'completed' | 'failed';
 export interface DistractorAnalysis { choice: string; concept: string; whyWrong: string }
 export interface QuestionAnalysis {
-  domain: string; part: string; primaryServices: string[]; secondaryServices: string[]; concept: string;
+  domain: string; part: string; primaryServices: string[]; secondaryServices: string[]; serviceSummaries?: Record<string, string>; concept: string; conceptExplanation?: string;
   problemPattern: string; suggestedPattern?: string; architecturePath: string[]; keyClues: string[];
   decisionPoint: string; reasoningPath: string[]; correctAnswerRule: string; examTrap: string;
   distractorAnalysis: DistractorAnalysis[]; difficulty: 1 | 2 | 3 | 4 | 5;

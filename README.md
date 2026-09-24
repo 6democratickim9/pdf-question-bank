@@ -12,6 +12,15 @@ The endpoint must return `{ "analysis": { ... } }` using the DVA schema in `src/
 
 The original answer and explanation are never overwritten. Analysis is optional, so existing locally stored question banks continue to work as `Not analyzed`.
 
+## 로컬 DVA-C02 분석 데이터
+
+개인 분석 번들은 `public/local-data/dva-c02-analysis.json`에 저장되며 Git에서 제외됩니다. DVA PDF로 만든 문제은행을 열면 `originalNumber` 기준으로 553개 분석을 자동 병합하고 IndexedDB에 저장합니다.
+
+```bash
+npm run dva:extract -- /Users/min/Downloads/dva-c02-full-553.pdf
+npm run dva:analyze-local
+```
+
 브라우저 안에서 PDF 문제집을 분석하고 시험·오답노트를 관리하는 로컬 우선 React 앱입니다. PDF와 문제 내용은 외부 서버로 전송되지 않으며 모든 진행 상황은 IndexedDB에 저장됩니다.
 
 ## 시작하기
