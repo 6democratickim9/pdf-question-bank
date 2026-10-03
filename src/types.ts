@@ -17,19 +17,20 @@ export interface Question {
 export interface QuestionBank { id: string; name: string; sourceFileName: string; createdAt: string; questions: Question[]; sourcePdf?: Blob }
 export type ExamKind = 'normal' | 'wrong' | 'practice';
 export interface ExamSession {
-  id: string; bankId: string; kind: ExamKind; cycleNumber?: number; questionIds: string[];
+  id: string; bankId: string; kind: ExamKind; cycleNumber?: number; rangeStart?: number; rangeEnd?: number; reviewOfResultId?: string; questionIds: string[];
   answers: Record<string, string[]>; currentIndex: number; startedAt: string; updatedAt?: string; endAt?: string; status: 'active' | 'submitted';
 }
 export interface QuestionResult { questionId: string; selected: string[]; correct: boolean; unanswered: boolean }
 export interface CycleResult {
-  id: string; sessionId: string; bankId: string; kind: ExamKind; cycleNumber?: number;
+  id: string; sessionId: string; bankId: string; kind: ExamKind; cycleNumber?: number; rangeStart?: number; rangeEnd?: number; reviewOfResultId?: string;
   completedAt: string; results: QuestionResult[];
 }
 export interface WrongAnswers { bankId: string; questionIds: string[] }
+export interface QuestionBookmark { bankId: string; questionId: string; createdAt: string }
 export interface WrongReviewItem {
   bankId: string; questionId: string; wrongCount: number; retryCount: number; firstWrongAt: string;
   lastAttemptAnswer: string[]; lastAttemptCorrect: boolean; resolved: boolean; lastReviewedAt: string;
-  resolvedAt?: string; concept?: string; pattern?: string;
+  resolvedAt?: string; persistent?: boolean; concept?: string; pattern?: string;
 }
 export interface MasteryRecord { attempts: number; correct: number; percentage: number }
 export interface BankStatistics {

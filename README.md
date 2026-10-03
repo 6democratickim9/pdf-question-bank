@@ -25,6 +25,16 @@ npm run dva:analyze-local
 
 ## 시작하기
 
+### 격리된 Docker 개발 환경
+
+실제 학습 데이터가 저장된 `localhost:5173`과 자동 검증 환경을 분리합니다.
+
+```bash
+npm run dev:container
+```
+
+컨테이너 앱은 `http://localhost:4173/pdf-question-bank/`에서 열립니다. 종료할 때는 `npm run dev:container:down`을 실행합니다.
+
 ```bash
 npm install
 npm run dev

@@ -1,0 +1,16 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "4173:5173"
+    volumes:
+      - .:/app
+      - pdf-question-bank-node-modules:/app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    restart: unless-stopped
+
+volumes:
+  pdf-question-bank-node-modules:

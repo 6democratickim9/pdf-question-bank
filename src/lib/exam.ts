@@ -3,6 +3,7 @@ import { createId } from './id';
 
 export const CYCLE_SIZE = 90;
 export const EXAM_DURATION_MS = 90 * 60 * 1000;
+export const EXAM_MINUTES_PER_QUESTION = 1;
 export const answerIsCorrect = (selected: string[], correct: string[]) =>
   selected.length > 0 && correct.length > 0 && selected.length === correct.length && [...selected].sort().every((answer, i) => answer === [...correct].sort()[i]);
 
@@ -14,6 +15,20 @@ export function createSession(bankId: string, kind: ExamKind, questions: Questio
     startedAt: new Date(started).toISOString(), updatedAt: new Date(started).toISOString(), endAt: kind === 'normal' ? new Date(started + EXAM_DURATION_MS).toISOString() : undefined, status: 'active' };
 }
 
+export function questionsInRange(questions: Question[], start: number, end: number): Question[] {
+  return questions.filter((question, index) => {
+    const number = question.originalNumber ?? index + 1;
+    return number >= start && number <= end;
+  });
+}
+
+export function createRangeSession(bankId: string, questions: Question[], start: number, end: number): ExamSession {
+  const selected = questionsInRange(questions, start, end);
+  const session = createSession(bankId, 'normal', selected);
+  const duration = Math.max(1, selected.length) * EXAM_MINUTES_PER_QUESTION * 60 * 1000;
+  return { ...session, rangeStart: start, rangeEnd: end, endAt: new Date(new Date(session.startedAt).getTime() + duration).toISOString() };
+}
+
 export function gradeSession(session: ExamSession, questions: Question[]): CycleResult {
   const map = new Map(questions.map((q) => [q.id, q]));
   const results: QuestionResult[] = session.questionIds.map((questionId) => {
@@ -21,5 +36,5 @@ export function gradeSession(session: ExamSession, questions: Question[]): Cycle
     return { questionId, selected, correct: answerIsCorrect(selected, correct), unanswered: !selected.length };
   });
   return { id: createId(), sessionId: session.id, bankId: session.bankId, kind: session.kind,
-    cycleNumber: session.cycleNumber, completedAt: new Date().toISOString(), results };
+    cycleNumber: session.cycleNumber, rangeStart: session.rangeStart, rangeEnd: session.rangeEnd, reviewOfResultId: session.reviewOfResultId, completedAt: new Date().toISOString(), results };
 }

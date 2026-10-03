@@ -1,0 +1,7 @@
+.git
+node_modules
+dist
+data
+public/local-data
+*.tsbuildinfo
+.DS_Store

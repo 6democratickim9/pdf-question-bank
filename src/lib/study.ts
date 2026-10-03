@@ -35,7 +35,9 @@ export function updateMastery(stats: BankStatistics, question: Question, correct
 }
 
 export function recordWrongAttempt(previous: WrongReviewItem | undefined, bankId: string, question: Question, selected: string[], correct: boolean, now = new Date().toISOString()): WrongReviewItem {
-  return { bankId, questionId: question.id, wrongCount: (previous?.wrongCount ?? 0) + (correct ? 0 : 1), retryCount: (previous?.retryCount ?? 0) + 1,
-    firstWrongAt: previous?.firstWrongAt ?? now, lastAttemptAnswer: selected, lastAttemptCorrect: correct, resolved: correct, lastReviewedAt: now,
-    resolvedAt: correct ? now : undefined, concept: question.analysis?.concept, pattern: question.analysis?.problemPattern };
+  const wrongCount = (previous?.wrongCount ?? 0) + (correct ? 0 : 1);
+  const persistent = !!previous?.persistent || wrongCount >= 2;
+  return { bankId, questionId: question.id, wrongCount, retryCount: (previous?.retryCount ?? 0) + 1,
+    firstWrongAt: previous?.firstWrongAt ?? now, lastAttemptAnswer: selected, lastAttemptCorrect: correct, resolved: correct && !persistent, persistent, lastReviewedAt: now,
+    resolvedAt: correct && !persistent ? now : undefined, concept: question.analysis?.concept, pattern: question.analysis?.problemPattern };
 }

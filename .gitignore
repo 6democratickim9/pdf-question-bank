@@ -7,3 +7,6 @@ vite.config.d.ts
 data/dva-c02-analysis.json
 data/dva-c02-questions.json
 public/local-data/
+data/*.pre-*.json
+work/
+*.profraw

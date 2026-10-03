@@ -14,6 +14,8 @@ import type { ExamSession, Question, QuestionBank } from './types';
 interface WrongReviewExamProps {
   bank: QuestionBank;
   initial: ExamSession;
+  bookmarkIds: string[];
+  onToggleBookmark: (questionId: string) => void;
   onAttachPdf: (file: File) => void;
   onExit: () => void;
 }
@@ -29,6 +31,8 @@ interface Feedback {
 export default function WrongReviewExam({
   bank,
   initial,
+  bookmarkIds,
+  onToggleBookmark,
   onAttachPdf,
   onExit,
 }: WrongReviewExamProps) {
@@ -166,7 +170,7 @@ export default function WrongReviewExam({
 
     await Promise.all([
       saveSession(nextSession),
-      db.updateWrongQuestion(bank.id, liveQuestion.id, correct),
+      db.updateWrongQuestion(bank.id, liveQuestion.id, correct, historyItem.persistent),
       db.saveWrongHistory(historyItem),
       db.saveStats(nextStats),
     ]);
@@ -336,10 +340,15 @@ export default function WrongReviewExam({
         </aside>
 
         <article className="question-panel">
-          <span className="question-number">
-            Question {question.originalNumber ?? 1}
-            {multiple && ' · 복수 선택'}
-          </span>
+          <div className="question-toolbar">
+            <span className="question-number">
+              Question {question.originalNumber ?? 1}
+              {multiple && ' · 복수 선택'}
+            </span>
+            <button className={`bookmark-button ${bookmarkIds.includes(question.id) ? 'active' : ''}`} onClick={() => void onToggleBookmark(question.id)}>
+              {bookmarkIds.includes(question.id) ? '★ 책갈피 해제' : '☆ 책갈피'}
+            </button>
+          </div>
 
           <h2>
             {question.question ||
