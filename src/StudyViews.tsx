@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { questionsForWrongQueue, relatedQuestionScores } from './lib/study';
 import { analyzeDvaBank, createEndpointAnalyzer, type AnalysisProgress } from './lib/dvaAnalysis';
-import { db } from './lib/db';
+import { db } from './lib/jsonDb';
 import { AWS_SERVICE_DESCRIPTIONS } from './lib/awsServiceDescriptions';
 import { describeAwsConcept } from './lib/awsConceptDescriptions';
 import type { BankStatistics, Question, QuestionBank, WrongReviewItem } from './types';

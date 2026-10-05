@@ -67,6 +67,12 @@ const repairedQuestions = canonical.map((question) => {
     { key: 'C', text: '"Condition": { "StringNotEquals": { "aws:SourceArn": "arn:aws:states:ap-south-1:111111111111:stateMachine:myStateMachine" } }' },
     { key: 'D', text: '"Condition": { "ArnLike": { "aws:SourceArn": "arn:aws:states:ap-south-1:*:stateMachine:myStateMachine" } }' },
   ];
+  if (question.originalNumber === 551) repaired.choices = [
+    { key: 'A', text: 'GetItem: { "TableName": "orders", "Key": { "accountId": { "N": "100" } } }' },
+    { key: 'B', text: 'BatchGetItem: { "RequestItems": { "orders": { "Keys": [{ "accountId": { "N": "100" } }] } } }' },
+    { key: 'C', text: 'Scan: { "TableName": "orders", "IndexName": "accountIndex", "FilterExpression": "accountId = :accountId", "ExpressionAttributeValues": { ":accountId": { "N": "100" } } }' },
+    { key: 'D', text: 'Query: { "TableName": "orders", "IndexName": "accountIndex", "KeyConditionExpression": "accountId = :accountId", "ExpressionAttributeValues": { ":accountId": { "N": "100" } } }' },
+  ];
   return repaired;
 });
 for (const previous of oldQuestions) {

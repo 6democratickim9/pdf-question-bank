@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { answerIsCorrect, createRangeSession, gradeSession, questionsInRange } from './exam';
+import { answerIsCorrect, createRangeSession, gradeSession, questionsInRange, shuffledBySeed } from './exam';
 import type { Question } from '../types';
 
 const question = (id: string, originalNumber?: number): Question => ({ id, originalNumber, question: id, choices: [], correctAnswers: ['A'], sourcePages: [] });
@@ -13,6 +13,20 @@ describe('answer grading', () => {
     expect(answerIsCorrect(['B'], ['B'])).toBe(true);
     expect(answerIsCorrect(['D', 'B'], ['B', 'D'])).toBe(true);
     expect(answerIsCorrect(['B'], ['B', 'D'])).toBe(false);
+  });
+});
+
+describe('wrong-note answer order', () => {
+  it('keeps a shuffled order stable inside one session and preserves every original answer key', () => {
+    const choices = ['A', 'B', 'C', 'D'];
+    const first = shuffledBySeed(choices, 'session-1:question-1');
+    expect(shuffledBySeed(choices, 'session-1:question-1')).toEqual(first);
+    expect([...first].sort()).toEqual(choices);
+  });
+
+  it('uses a different order for a new wrong-note session', () => {
+    const choices = ['A', 'B', 'C', 'D'];
+    expect(shuffledBySeed(choices, 'session-1:question-1')).not.toEqual(shuffledBySeed(choices, 'session-2:question-1'));
   });
 });
 

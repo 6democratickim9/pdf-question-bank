@@ -7,6 +7,21 @@ export const EXAM_MINUTES_PER_QUESTION = 1;
 export const answerIsCorrect = (selected: string[], correct: string[]) =>
   selected.length > 0 && correct.length > 0 && selected.length === correct.length && [...selected].sort().every((answer, i) => answer === [...correct].sort()[i]);
 
+export function shuffledBySeed<T>(values: T[], seed: string): T[] {
+  let state = 2166136261;
+  for (let index = 0; index < seed.length; index += 1) {
+    state ^= seed.charCodeAt(index);
+    state = Math.imul(state, 16777619);
+  }
+  const shuffled = [...values];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    state ^= state << 13; state ^= state >>> 17; state ^= state << 5;
+    const target = (state >>> 0) % (index + 1);
+    [shuffled[index], shuffled[target]] = [shuffled[target], shuffled[index]];
+  }
+  return shuffled;
+}
+
 export function createSession(bankId: string, kind: ExamKind, questions: Question[], cycleNumber?: number): ExamSession {
   const questionIds = questions.map((q) => q.id);
   for (let i = questionIds.length - 1; i > 0; i -= 1) { const j = Math.floor(Math.random() * (i + 1)); [questionIds[i], questionIds[j]] = [questionIds[j], questionIds[i]]; }

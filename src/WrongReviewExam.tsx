@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { db } from './lib/db';
-import { answerIsCorrect } from './lib/exam';
+import { db } from './lib/jsonDb';
+import { answerIsCorrect, shuffledBySeed } from './lib/exam';
 import {
   advanceWrongReviewQueue,
   continueWrongReviewSession,
@@ -64,6 +64,13 @@ export default function WrongReviewExam({
   // 채점 직후 큐에서 문제가 빠져도 결과/해설 화면을 유지하기 위해
   // feedback에 당시 문제를 보관합니다.
   const question = feedback?.question ?? liveQuestion;
+
+  const displayChoices = useMemo(() => {
+    const choices = question?.choices.length
+      ? question.choices
+      : ['A', 'B', 'C', 'D'].map((key) => ({ key, text: '원본 PDF의 선택지를 확인하세요.' }));
+    return shuffledBySeed(choices, `${current.id}:${question?.id ?? ''}`);
+  }, [current.id, question?.id, question?.choices]);
 
   const saveSession = async (next: ExamSession) => {
     const saved = {
@@ -237,13 +244,6 @@ export default function WrongReviewExam({
   const multiple = question.correctAnswers.length > 1;
   const needsSource =
     !question.question.trim() || question.choices.length < 2;
-
-  const displayChoices = question.choices.length
-    ? question.choices
-    : ['A', 'B', 'C', 'D'].map((key) => ({
-        key,
-        text: '원본 PDF의 선택지를 확인하세요.',
-      }));
 
   const queuedQuestionIds = new Set(current.questionIds);
   const relatedQueuedQuestions = feedback

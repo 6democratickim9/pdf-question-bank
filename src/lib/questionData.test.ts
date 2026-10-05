@@ -96,4 +96,13 @@ describe('canonical DVA question data', () => {
     expect(question.choices[3].text).toContain('dynamodb:Scan');
     expect(question.choices[3].text).not.toContain('PutItem');
   });
+
+  it('Q551 이미지형 DynamoDB 요청 매개변수를 보존한다', async () => {
+    const state = JSON.parse(await readFile(resolve('data/pdf-question-bank-state.json'), 'utf8'));
+    const question = (state.questionBanks[0].questions as Question[]).find((item) => item.originalNumber === 551)!;
+    expect(question.correctAnswers).toEqual(['D']);
+    expect(question.choices.every((choice) => choice.text.includes('accountId'))).toBe(true);
+    expect(question.choices[3].text).toContain('KeyConditionExpression');
+    expect(question.choices[3].text).toContain('accountIndex');
+  });
 });

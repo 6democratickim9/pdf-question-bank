@@ -48951,19 +48951,19 @@
           "choices": [
             {
               "key": "A",
-              "text": "DynamoDB API 요청을 정의하여 GetItem 작업을 다음 매개변수로 설정한다:"
+              "text": "GetItem: { \"TableName\": \"orders\", \"Key\": { \"accountId\": { \"N\": \"100\" } } }"
             },
             {
               "key": "B",
-              "text": "DynamoDB API 요청을 정의하여 BatchGetItem 작업을 다음 매개변수로 설정한다:"
+              "text": "BatchGetItem: { \"RequestItems\": { \"orders\": { \"Keys\": [{ \"accountId\": { \"N\": \"100\" } }] } } }"
             },
             {
               "key": "C",
-              "text": "DynamoDB API 요청을 정의하여 Scan 작업을 다음 매개변수로 설정한다:"
+              "text": "Scan: { \"TableName\": \"orders\", \"IndexName\": \"accountIndex\", \"FilterExpression\": \"accountId = :accountId\", \"ExpressionAttributeValues\": { \":accountId\": { \"N\": \"100\" } } }"
             },
             {
               "key": "D",
-              "text": "DynamoDB API 요청을 정의하여 Query 작업을 다음 매개변수로 설정한다:"
+              "text": "Query: { \"TableName\": \"orders\", \"IndexName\": \"accountIndex\", \"KeyConditionExpression\": \"accountId = :accountId\", \"ExpressionAttributeValues\": { \":accountId\": { \"N\": \"100\" } } }"
             }
           ],
           "correctAnswers": [
@@ -52404,14 +52404,530 @@
         "94f21529-960b-497c-8a18-6eb66abf3381",
         "4bdc1081-f88e-48ae-bdac-dd8fc8f9bc29"
       ],
-      "answers": {},
-      "currentIndex": 0,
+      "answers": {
+        "9ece8787-6fcf-4134-ba9e-5890228cf1a1": [
+          "A"
+        ],
+        "41bd13f6-6f64-4d7b-a52c-9126ed3b2af1": [
+          "B"
+        ],
+        "939d486d-cfe5-427c-8b5a-b1fb00ad179e": [
+          "B"
+        ],
+        "e20a4124-75c6-40ff-9ce8-e8a29bd25864": [
+          "B"
+        ],
+        "77dedade-d7d1-48ce-929c-70aeeb2673b2": [
+          "D"
+        ],
+        "a396e841-af99-43df-bb1f-020eb74d66f2": [
+          "D"
+        ],
+        "02442b98-c7ab-4013-976f-df03d8ce8000": [
+          "D"
+        ],
+        "a02f82e4-759e-4c75-8142-3c1f7126dbc6": [
+          "B"
+        ],
+        "243a871e-b424-41e6-b038-658e06fca99a": [
+          "A"
+        ],
+        "23f8e703-8cc9-4889-8fee-d82e5cc053e2": [
+          "A"
+        ],
+        "a3af8640-0d84-42f3-9ad8-7f583f1a489c": [
+          "C"
+        ],
+        "68c64faf-9c67-4d7b-bcf7-e09a55194df4": [
+          "C"
+        ],
+        "2735921d-e837-433e-9326-4d81939e88d2": [
+          "A"
+        ],
+        "c315a3f7-5b35-44b9-8d2e-4fef934004c4": [
+          "D"
+        ],
+        "acb0a9b2-1595-4cae-94ef-ce049c4ae179": [
+          "B"
+        ],
+        "ce416b9f-efd6-4c42-879e-66b25901d9c4": [
+          "E",
+          "A"
+        ],
+        "ade1003c-bb5a-429b-90b5-8d5f952a47c1": [
+          "A"
+        ],
+        "4624dc5f-2b96-46ab-ba55-542a0807df84": [
+          "A"
+        ],
+        "4bdc1081-f88e-48ae-bdac-dd8fc8f9bc29": [
+          "D"
+        ],
+        "5d1d0b68-32bd-456d-b4a4-dfcbce7fa4e1": [
+          "A"
+        ],
+        "12f3d650-4d36-4568-aa47-8140977f5d3f": [
+          "C"
+        ],
+        "338e754f-3ac3-4c19-9eb6-0482c3c05705": [
+          "D"
+        ],
+        "2e81bf69-7077-436e-a4b7-f1e7b12366f3": [
+          "D"
+        ],
+        "792505f2-af09-45f4-a89b-f16aa69593a2": [
+          "B"
+        ],
+        "5f1bb8ec-8981-4c5c-8d38-6a4c9d3a8247": [
+          "A",
+          "B"
+        ],
+        "8e077e74-b19e-491d-8608-58bb85c8df9d": [
+          "A"
+        ],
+        "f28c956e-888d-408c-8526-a909e7148049": [
+          "D"
+        ],
+        "98c31ac5-e067-4f6a-9812-558a00aa99d4": [
+          "A"
+        ],
+        "cdb0d08a-0be5-4162-8f4c-d5293c91760b": [
+          "D"
+        ],
+        "94882587-0415-4755-8143-086da6a091ff": [
+          "C"
+        ],
+        "a7ccc923-6255-4246-b0a9-6f7d76eb1a0c": [
+          "B",
+          "D"
+        ],
+        "3a4a9899-58a3-44e0-beb5-d127cd7894bb": [
+          "D"
+        ],
+        "0dffabf1-7ea2-4a61-a49e-b8b566c1d54e": [
+          "C"
+        ],
+        "76c281e1-1541-46c3-9fc2-187950cb71c6": [
+          "B"
+        ],
+        "b001af49-8a91-48da-9ea4-8ebe4ac2e1e1": [
+          "A"
+        ],
+        "df4272fa-f002-48a1-b8cc-66263886b554": [
+          "C"
+        ],
+        "d39732d3-aad0-4279-befe-a3ea5dab6c15": [
+          "C"
+        ],
+        "b8ef03fd-85e4-4436-86fa-455729d93cd0": [
+          "E",
+          "B"
+        ],
+        "e1dde9e4-2348-4bdb-90f2-903722a4e9f2": [
+          "E",
+          "C"
+        ],
+        "600063c4-11a4-444a-b9b6-057b90da99d3": [
+          "B",
+          "C"
+        ],
+        "bf4f7153-17ff-4190-b371-adee1bf7da9a": [
+          "C"
+        ],
+        "e9008de3-5af7-4a54-891a-19c64115ed34": [
+          "A"
+        ],
+        "a3294fea-d4b1-432b-8c42-d2ceb9d73186": [
+          "A"
+        ],
+        "56fcb7d7-38ec-4725-a6e4-da38ef4c979b": [
+          "B"
+        ],
+        "61bc016f-abd1-4189-9974-5c702f1fda0b": [
+          "A"
+        ],
+        "7aa82df7-4548-4b10-89c8-64f9df4f4ab6": [
+          "B"
+        ],
+        "cec2b2cd-3eb2-42f1-9bb7-e61f0f6bd0a6": [
+          "B"
+        ],
+        "74cdb7e8-9944-4ab5-b7bb-d5d1c94e9514": [
+          "A"
+        ],
+        "427faf06-87cc-47d5-b2b1-e3ffb499374c": [
+          "C"
+        ],
+        "2125ff0b-f3e1-4aa7-90a1-81ef1bd7ec64": [
+          "C",
+          "E"
+        ],
+        "94f21529-960b-497c-8a18-6eb66abf3381": [
+          "B"
+        ]
+      },
+      "currentIndex": 49,
       "startedAt": "2026-10-03T08:07:34.406Z",
-      "updatedAt": "2026-10-03T08:07:34.406Z",
+      "updatedAt": "2026-10-03T08:48:37.526Z",
       "endAt": "2026-10-03T08:58:34.406Z",
-      "status": "active",
+      "status": "submitted",
       "rangeStart": 200,
       "rangeEnd": 250
+    },
+    {
+      "id": "76a9266a-dd85-47d3-8ceb-3231ea9431d0",
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "kind": "practice",
+      "questionIds": [
+        "41bd13f6-6f64-4d7b-a52c-9126ed3b2af1",
+        "94882587-0415-4755-8143-086da6a091ff",
+        "94f21529-960b-497c-8a18-6eb66abf3381",
+        "f28c956e-888d-408c-8526-a909e7148049",
+        "600063c4-11a4-444a-b9b6-057b90da99d3",
+        "3a4a9899-58a3-44e0-beb5-d127cd7894bb",
+        "792505f2-af09-45f4-a89b-f16aa69593a2",
+        "7aa82df7-4548-4b10-89c8-64f9df4f4ab6",
+        "acb0a9b2-1595-4cae-94ef-ce049c4ae179",
+        "bf4f7153-17ff-4190-b371-adee1bf7da9a",
+        "12f3d650-4d36-4568-aa47-8140977f5d3f",
+        "e20a4124-75c6-40ff-9ce8-e8a29bd25864",
+        "a396e841-af99-43df-bb1f-020eb74d66f2",
+        "df4272fa-f002-48a1-b8cc-66263886b554"
+      ],
+      "answers": {
+        "41bd13f6-6f64-4d7b-a52c-9126ed3b2af1": [
+          "A"
+        ],
+        "94882587-0415-4755-8143-086da6a091ff": [
+          "D"
+        ],
+        "94f21529-960b-497c-8a18-6eb66abf3381": [
+          "A"
+        ],
+        "f28c956e-888d-408c-8526-a909e7148049": [
+          "B"
+        ],
+        "600063c4-11a4-444a-b9b6-057b90da99d3": [
+          "B",
+          "C"
+        ],
+        "3a4a9899-58a3-44e0-beb5-d127cd7894bb": [
+          "C"
+        ],
+        "792505f2-af09-45f4-a89b-f16aa69593a2": [
+          "D"
+        ],
+        "7aa82df7-4548-4b10-89c8-64f9df4f4ab6": [
+          "B"
+        ],
+        "acb0a9b2-1595-4cae-94ef-ce049c4ae179": [
+          "C"
+        ],
+        "bf4f7153-17ff-4190-b371-adee1bf7da9a": [
+          "A"
+        ],
+        "12f3d650-4d36-4568-aa47-8140977f5d3f": [
+          "A"
+        ],
+        "e20a4124-75c6-40ff-9ce8-e8a29bd25864": [
+          "A"
+        ],
+        "a396e841-af99-43df-bb1f-020eb74d66f2": [
+          "A"
+        ],
+        "df4272fa-f002-48a1-b8cc-66263886b554": [
+          "B"
+        ]
+      },
+      "currentIndex": 13,
+      "startedAt": "2026-10-03T08:48:45.930Z",
+      "updatedAt": "2026-10-03T08:55:54.814Z",
+      "status": "submitted",
+      "rangeStart": 200,
+      "rangeEnd": 250,
+      "reviewOfResultId": "12659915-409b-414c-bb17-6fb170341dff"
+    },
+    {
+      "id": "45dea1f1-3fa4-4990-af36-940c6d796332",
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "kind": "practice",
+      "questionIds": [
+        "3a4a9899-58a3-44e0-beb5-d127cd7894bb",
+        "600063c4-11a4-444a-b9b6-057b90da99d3",
+        "e20a4124-75c6-40ff-9ce8-e8a29bd25864",
+        "7aa82df7-4548-4b10-89c8-64f9df4f4ab6"
+      ],
+      "answers": {
+        "3a4a9899-58a3-44e0-beb5-d127cd7894bb": [
+          "B"
+        ],
+        "600063c4-11a4-444a-b9b6-057b90da99d3": [
+          "C",
+          "E"
+        ],
+        "e20a4124-75c6-40ff-9ce8-e8a29bd25864": [
+          "C"
+        ],
+        "7aa82df7-4548-4b10-89c8-64f9df4f4ab6": [
+          "D"
+        ]
+      },
+      "currentIndex": 3,
+      "startedAt": "2026-10-03T08:55:59.118Z",
+      "updatedAt": "2026-10-03T08:57:26.979Z",
+      "status": "submitted",
+      "rangeStart": 200,
+      "rangeEnd": 250,
+      "reviewOfResultId": "429dd5ab-0d54-41f2-8b97-bc93a75fce41"
+    },
+    {
+      "id": "8b86643c-5cd7-4d9a-90ca-2ae132c31cf1",
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "kind": "wrong",
+      "questionIds": [
+        "fdaeaa91-1781-434e-a3f6-3b85c76202f8",
+        "6ec8de01-d1d4-4a9e-b9e2-307df6713689",
+        "304c75bb-fe73-41e0-9b14-376efeb64c07",
+        "570e4fdb-b44d-4217-a23c-c4ff68e7c95a",
+        "6cc50f9d-f78d-4c21-881c-edb39362b197",
+        "984d88a5-746e-46f2-94f6-22f69109838b",
+        "27e50ab4-89a4-465a-8e9b-0262e1354c11",
+        "72f0b194-b3bd-4143-adf6-f3b7c82540eb",
+        "d7cef5f8-9517-4692-87fb-07cdf830b256",
+        "d5436b88-3cdb-42a1-8267-3bbd295bae86",
+        "aa183674-98b4-4fca-9d8c-2a1331b6fb77",
+        "29979f34-1043-4b2e-8242-51ddb79c3414",
+        "35ab5031-780c-4fd0-b626-6612296a21db",
+        "8a26c531-86e7-4c12-a85c-2226a219af98",
+        "94882587-0415-4755-8143-086da6a091ff",
+        "6977337c-71bb-4068-9f6a-7d49925da366",
+        "ce9de30d-019a-4de5-b8ab-835d9a0e8483",
+        "3a4a9899-58a3-44e0-beb5-d127cd7894bb",
+        "12dffdb8-1346-4fb5-8093-fff6328e0137",
+        "f69c436f-3d03-4960-9346-6d93f0915e49",
+        "f28c956e-888d-408c-8526-a909e7148049",
+        "23a645e3-cd58-4a50-a2ef-35e312d75155",
+        "d3fae419-4b51-4e6b-b965-ce2111cc6fd2",
+        "acb0a9b2-1595-4cae-94ef-ce049c4ae179",
+        "ee2d478b-a3f0-4406-9269-0c876f51dae9",
+        "ec8f161d-daf2-45ab-aead-6dc31aec5f6c",
+        "1360dcf1-8500-41ea-8ffc-7cedc42f4ed3",
+        "4fde9f2e-a7fc-41d3-938b-242d9541aa5a",
+        "fe688f1c-997c-4b39-bef9-ed20d2e3e0c0",
+        "e9d5e0e1-96e0-4278-894f-de52a88b674a",
+        "07cd35a9-6eaf-4524-b742-628095598b8f",
+        "792505f2-af09-45f4-a89b-f16aa69593a2",
+        "df4272fa-f002-48a1-b8cc-66263886b554",
+        "3c77dcdd-0949-4c0b-89d5-9889d6f1cde5",
+        "eecdde7e-5e1e-498b-91b0-0c2b704fbddd",
+        "3380f8a3-21f1-4890-a665-8e0b3a97caf3",
+        "b97c138e-37c6-4145-ab51-b8e17cae9137",
+        "d7e45e5f-98da-435c-93a2-9ac9445a2c1f",
+        "45f6fc70-77ee-4990-93ed-a7dc024669f0",
+        "7aa82df7-4548-4b10-89c8-64f9df4f4ab6",
+        "feeb3ac0-1ec1-4db5-999a-9290d0e80e0c",
+        "01825d11-42f7-44af-bea3-15a2604a3ad4",
+        "e20a4124-75c6-40ff-9ce8-e8a29bd25864",
+        "bf4f7153-17ff-4190-b371-adee1bf7da9a",
+        "c56324ee-e02a-4352-b2d9-ee8d1ba7af42",
+        "4ee3614a-bed6-4dbe-ab8f-adefd9d8ce90",
+        "1ccce75f-f6cc-4433-9c5c-83eccdd33615",
+        "7f05e358-995d-485b-ae76-39e252829751",
+        "41bd13f6-6f64-4d7b-a52c-9126ed3b2af1",
+        "a396e841-af99-43df-bb1f-020eb74d66f2",
+        "73a395be-309c-4e35-a7b4-5ba0f25c7cc3",
+        "376e15b3-241f-4042-810c-a82b994a8b97",
+        "ccdebac9-23c8-486e-802d-3b986dd8ee37",
+        "27f95f4a-6fc9-4215-a028-3cbfff3f17ef",
+        "4e76d692-4141-42cc-8fdb-ff5908b6e701",
+        "600063c4-11a4-444a-b9b6-057b90da99d3",
+        "ae7bc2d0-e045-4159-8371-ae637bc290cf",
+        "fa42ee66-0f24-469f-8696-88c40045cbbe",
+        "e8103ad0-c8c1-45a1-a4bc-78e5462db4ef",
+        "1a829d7b-821b-4d54-89ed-9a365bcb6c94",
+        "12f3d650-4d36-4568-aa47-8140977f5d3f",
+        "e2d33869-ba57-43df-b3e2-de11d016ceeb",
+        "94f21529-960b-497c-8a18-6eb66abf3381",
+        "4a9bb48b-f650-4189-8d17-a0210d66ede7"
+      ],
+      "answers": {},
+      "currentIndex": 0,
+      "startedAt": "2026-10-03T09:23:20.883Z",
+      "updatedAt": "2026-10-03T09:25:17.631Z",
+      "status": "active"
+    },
+    {
+      "id": "2cd938c1-0e21-4aa0-90ce-b27ee31cf471",
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "kind": "wrong",
+      "questionIds": [
+        "45f6fc70-77ee-4990-93ed-a7dc024669f0",
+        "fdaeaa91-1781-434e-a3f6-3b85c76202f8",
+        "6cc50f9d-f78d-4c21-881c-edb39362b197",
+        "e9d5e0e1-96e0-4278-894f-de52a88b674a",
+        "d7cef5f8-9517-4692-87fb-07cdf830b256",
+        "f28c956e-888d-408c-8526-a909e7148049",
+        "df4272fa-f002-48a1-b8cc-66263886b554",
+        "f69c436f-3d03-4960-9346-6d93f0915e49",
+        "94882587-0415-4755-8143-086da6a091ff",
+        "acb0a9b2-1595-4cae-94ef-ce049c4ae179",
+        "a396e841-af99-43df-bb1f-020eb74d66f2",
+        "fe688f1c-997c-4b39-bef9-ed20d2e3e0c0",
+        "792505f2-af09-45f4-a89b-f16aa69593a2",
+        "8a26c531-86e7-4c12-a85c-2226a219af98",
+        "376e15b3-241f-4042-810c-a82b994a8b97",
+        "12f3d650-4d36-4568-aa47-8140977f5d3f",
+        "4a9bb48b-f650-4189-8d17-a0210d66ede7",
+        "d5436b88-3cdb-42a1-8267-3bbd295bae86",
+        "304c75bb-fe73-41e0-9b14-376efeb64c07",
+        "b97c138e-37c6-4145-ab51-b8e17cae9137",
+        "ec8f161d-daf2-45ab-aead-6dc31aec5f6c",
+        "984d88a5-746e-46f2-94f6-22f69109838b",
+        "ce9de30d-019a-4de5-b8ab-835d9a0e8483",
+        "fa42ee66-0f24-469f-8696-88c40045cbbe",
+        "01825d11-42f7-44af-bea3-15a2604a3ad4",
+        "4ee3614a-bed6-4dbe-ab8f-adefd9d8ce90",
+        "3380f8a3-21f1-4890-a665-8e0b3a97caf3",
+        "e8103ad0-c8c1-45a1-a4bc-78e5462db4ef",
+        "bf4f7153-17ff-4190-b371-adee1bf7da9a",
+        "4fde9f2e-a7fc-41d3-938b-242d9541aa5a",
+        "41bd13f6-6f64-4d7b-a52c-9126ed3b2af1",
+        "ccdebac9-23c8-486e-802d-3b986dd8ee37",
+        "27f95f4a-6fc9-4215-a028-3cbfff3f17ef",
+        "6977337c-71bb-4068-9f6a-7d49925da366",
+        "feeb3ac0-1ec1-4db5-999a-9290d0e80e0c",
+        "ae7bc2d0-e045-4159-8371-ae637bc290cf",
+        "6ec8de01-d1d4-4a9e-b9e2-307df6713689",
+        "1ccce75f-f6cc-4433-9c5c-83eccdd33615",
+        "d3fae419-4b51-4e6b-b965-ce2111cc6fd2",
+        "aa183674-98b4-4fca-9d8c-2a1331b6fb77",
+        "7f05e358-995d-485b-ae76-39e252829751",
+        "e20a4124-75c6-40ff-9ce8-e8a29bd25864",
+        "4e76d692-4141-42cc-8fdb-ff5908b6e701",
+        "c56324ee-e02a-4352-b2d9-ee8d1ba7af42",
+        "1a829d7b-821b-4d54-89ed-9a365bcb6c94",
+        "3a4a9899-58a3-44e0-beb5-d127cd7894bb",
+        "72f0b194-b3bd-4143-adf6-f3b7c82540eb",
+        "23a645e3-cd58-4a50-a2ef-35e312d75155",
+        "12dffdb8-1346-4fb5-8093-fff6328e0137",
+        "ee2d478b-a3f0-4406-9269-0c876f51dae9",
+        "3c77dcdd-0949-4c0b-89d5-9889d6f1cde5",
+        "35ab5031-780c-4fd0-b626-6612296a21db",
+        "1360dcf1-8500-41ea-8ffc-7cedc42f4ed3",
+        "d7e45e5f-98da-435c-93a2-9ac9445a2c1f",
+        "600063c4-11a4-444a-b9b6-057b90da99d3",
+        "07cd35a9-6eaf-4524-b742-628095598b8f",
+        "eecdde7e-5e1e-498b-91b0-0c2b704fbddd",
+        "e2d33869-ba57-43df-b3e2-de11d016ceeb",
+        "570e4fdb-b44d-4217-a23c-c4ff68e7c95a",
+        "73a395be-309c-4e35-a7b4-5ba0f25c7cc3",
+        "94f21529-960b-497c-8a18-6eb66abf3381",
+        "27e50ab4-89a4-465a-8e9b-0262e1354c11",
+        "29979f34-1043-4b2e-8242-51ddb79c3414",
+        "7aa82df7-4548-4b10-89c8-64f9df4f4ab6"
+      ],
+      "answers": {},
+      "currentIndex": 0,
+      "startedAt": "2026-10-03T09:29:22.539Z",
+      "updatedAt": "2026-10-03T09:33:00.897Z",
+      "status": "active"
+    },
+    {
+      "id": "1c658274-2443-423f-8ed2-6b53cb59350b",
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "kind": "practice",
+      "questionIds": [
+        "a25df38f-6bdb-45b6-8ee9-05cc506922bc",
+        "75343f94-19dc-40ca-a8b3-5fb516e489e5",
+        "d5436b88-3cdb-42a1-8267-3bbd295bae86",
+        "b0c411d4-e4e7-4ec5-b4c9-2ebe55263f06",
+        "12dffdb8-1346-4fb5-8093-fff6328e0137",
+        "304c75bb-fe73-41e0-9b14-376efeb64c07",
+        "30d4a6f6-7caf-4ed9-bfcd-04e479e12634",
+        "a98b6c9e-a757-4a10-bf83-4d93cb14768a",
+        "243a871e-b424-41e6-b038-658e06fca99a",
+        "4d2f7dc0-4008-4afb-819f-3d6473083931",
+        "570e4fdb-b44d-4217-a23c-c4ff68e7c95a",
+        "eecdde7e-5e1e-498b-91b0-0c2b704fbddd",
+        "35ab5031-780c-4fd0-b626-6612296a21db",
+        "acb0a9b2-1595-4cae-94ef-ce049c4ae179",
+        "96ec6307-80ac-4942-a7dd-f2b3fbda5f44",
+        "fe688f1c-997c-4b39-bef9-ed20d2e3e0c0",
+        "9d9bfe4c-d3e3-4b21-959b-932a81d6aa00",
+        "c315a3f7-5b35-44b9-8d2e-4fef934004c4",
+        "90d7e358-443b-4581-9b67-99cbcfb4b193",
+        "5e1e5a1e-a23f-4b54-a357-ef78ae9257f5",
+        "79678d29-97e7-4ee7-9ad9-61b421df8f67",
+        "6cc50f9d-f78d-4c21-881c-edb39362b197",
+        "2735921d-e837-433e-9326-4d81939e88d2",
+        "94f21529-960b-497c-8a18-6eb66abf3381",
+        "338f02b6-55bb-4feb-bad8-532ae7f6c168",
+        "00a7f2be-b672-4e16-ac49-a1eec24a225d",
+        "ec8f161d-daf2-45ab-aead-6dc31aec5f6c",
+        "b97c138e-37c6-4145-ab51-b8e17cae9137",
+        "600063c4-11a4-444a-b9b6-057b90da99d3",
+        "45f6fc70-77ee-4990-93ed-a7dc024669f0",
+        "091176a2-1b19-4e76-b666-cd406097b9f6",
+        "4a9bb48b-f650-4189-8d17-a0210d66ede7",
+        "b8ef03fd-85e4-4436-86fa-455729d93cd0",
+        "3a4a9899-58a3-44e0-beb5-d127cd7894bb",
+        "12f3d650-4d36-4568-aa47-8140977f5d3f",
+        "ce416b9f-efd6-4c42-879e-66b25901d9c4",
+        "e20a4124-75c6-40ff-9ce8-e8a29bd25864",
+        "338e754f-3ac3-4c19-9eb6-0482c3c05705",
+        "01825d11-42f7-44af-bea3-15a2604a3ad4",
+        "b001af49-8a91-48da-9ea4-8ebe4ac2e1e1",
+        "96290b63-af4a-4f49-9d4e-409c8895a3a0",
+        "e8103ad0-c8c1-45a1-a4bc-78e5462db4ef",
+        "1360dcf1-8500-41ea-8ffc-7cedc42f4ed3",
+        "a3294fea-d4b1-432b-8c42-d2ceb9d73186",
+        "aa183674-98b4-4fca-9d8c-2a1331b6fb77",
+        "54ab741b-c2ce-4178-bfcd-5bd789028f32",
+        "d7cef5f8-9517-4692-87fb-07cdf830b256"
+      ],
+      "answers": {
+        "a25df38f-6bdb-45b6-8ee9-05cc506922bc": [
+          "A",
+          "D"
+        ],
+        "a98b6c9e-a757-4a10-bf83-4d93cb14768a": [
+          "B"
+        ],
+        "243a871e-b424-41e6-b038-658e06fca99a": [
+          "A"
+        ],
+        "35ab5031-780c-4fd0-b626-6612296a21db": [
+          "A",
+          "E"
+        ],
+        "c315a3f7-5b35-44b9-8d2e-4fef934004c4": [
+          "D"
+        ],
+        "b97c138e-37c6-4145-ab51-b8e17cae9137": [
+          "C"
+        ],
+        "b8ef03fd-85e4-4436-86fa-455729d93cd0": [
+          "B",
+          "E"
+        ],
+        "1360dcf1-8500-41ea-8ffc-7cedc42f4ed3": [
+          "A"
+        ],
+        "e8103ad0-c8c1-45a1-a4bc-78e5462db4ef": [
+          "B"
+        ],
+        "aa183674-98b4-4fca-9d8c-2a1331b6fb77": [
+          "E",
+          "C"
+        ],
+        "e20a4124-75c6-40ff-9ce8-e8a29bd25864": [
+          "C"
+        ]
+      },
+      "currentIndex": 36,
+      "startedAt": "2026-10-03T09:33:13.140Z",
+      "updatedAt": "2026-10-03T09:36:32.285Z",
+      "status": "active"
     }
   ],
   "cycleResults": [
@@ -60078,6 +60594,602 @@
           "unanswered": false
         }
       ]
+    },
+    {
+      "id": "12659915-409b-414c-bb17-6fb170341dff",
+      "sessionId": "16114b78-db9e-4755-ba80-e361273e6e5b",
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "kind": "normal",
+      "rangeStart": 200,
+      "rangeEnd": 250,
+      "completedAt": "2026-10-03T08:48:37.663Z",
+      "results": [
+        {
+          "questionId": "9ece8787-6fcf-4134-ba9e-5890228cf1a1",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "41bd13f6-6f64-4d7b-a52c-9126ed3b2af1",
+          "selected": [
+            "B"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "939d486d-cfe5-427c-8b5a-b1fb00ad179e",
+          "selected": [
+            "B"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "e20a4124-75c6-40ff-9ce8-e8a29bd25864",
+          "selected": [
+            "B"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "77dedade-d7d1-48ce-929c-70aeeb2673b2",
+          "selected": [
+            "D"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "a396e841-af99-43df-bb1f-020eb74d66f2",
+          "selected": [
+            "D"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "02442b98-c7ab-4013-976f-df03d8ce8000",
+          "selected": [
+            "D"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "a02f82e4-759e-4c75-8142-3c1f7126dbc6",
+          "selected": [
+            "B"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "243a871e-b424-41e6-b038-658e06fca99a",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "23f8e703-8cc9-4889-8fee-d82e5cc053e2",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "a3af8640-0d84-42f3-9ad8-7f583f1a489c",
+          "selected": [
+            "C"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "68c64faf-9c67-4d7b-bcf7-e09a55194df4",
+          "selected": [
+            "C"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "2735921d-e837-433e-9326-4d81939e88d2",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "c315a3f7-5b35-44b9-8d2e-4fef934004c4",
+          "selected": [
+            "D"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "acb0a9b2-1595-4cae-94ef-ce049c4ae179",
+          "selected": [
+            "B"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "ce416b9f-efd6-4c42-879e-66b25901d9c4",
+          "selected": [
+            "E",
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "ade1003c-bb5a-429b-90b5-8d5f952a47c1",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "338e754f-3ac3-4c19-9eb6-0482c3c05705",
+          "selected": [
+            "D"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "8e077e74-b19e-491d-8608-58bb85c8df9d",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "0dffabf1-7ea2-4a61-a49e-b8b566c1d54e",
+          "selected": [
+            "C"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "76c281e1-1541-46c3-9fc2-187950cb71c6",
+          "selected": [
+            "B"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "f28c956e-888d-408c-8526-a909e7148049",
+          "selected": [
+            "D"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "b001af49-8a91-48da-9ea4-8ebe4ac2e1e1",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "df4272fa-f002-48a1-b8cc-66263886b554",
+          "selected": [
+            "C"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "b8ef03fd-85e4-4436-86fa-455729d93cd0",
+          "selected": [
+            "E",
+            "B"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "d39732d3-aad0-4279-befe-a3ea5dab6c15",
+          "selected": [
+            "C"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "cdb0d08a-0be5-4162-8f4c-d5293c91760b",
+          "selected": [
+            "D"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "12f3d650-4d36-4568-aa47-8140977f5d3f",
+          "selected": [
+            "C"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "4624dc5f-2b96-46ab-ba55-542a0807df84",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "3a4a9899-58a3-44e0-beb5-d127cd7894bb",
+          "selected": [
+            "D"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "e9008de3-5af7-4a54-891a-19c64115ed34",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "94882587-0415-4755-8143-086da6a091ff",
+          "selected": [
+            "C"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "a7ccc923-6255-4246-b0a9-6f7d76eb1a0c",
+          "selected": [
+            "B",
+            "D"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "e1dde9e4-2348-4bdb-90f2-903722a4e9f2",
+          "selected": [
+            "E",
+            "C"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "cec2b2cd-3eb2-42f1-9bb7-e61f0f6bd0a6",
+          "selected": [
+            "B"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "a3294fea-d4b1-432b-8c42-d2ceb9d73186",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "5d1d0b68-32bd-456d-b4a4-dfcbce7fa4e1",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "5f1bb8ec-8981-4c5c-8d38-6a4c9d3a8247",
+          "selected": [
+            "A",
+            "B"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "56fcb7d7-38ec-4725-a6e4-da38ef4c979b",
+          "selected": [
+            "B"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "61bc016f-abd1-4189-9974-5c702f1fda0b",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "74cdb7e8-9944-4ab5-b7bb-d5d1c94e9514",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "427faf06-87cc-47d5-b2b1-e3ffb499374c",
+          "selected": [
+            "C"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "792505f2-af09-45f4-a89b-f16aa69593a2",
+          "selected": [
+            "B"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "7aa82df7-4548-4b10-89c8-64f9df4f4ab6",
+          "selected": [
+            "B"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "98c31ac5-e067-4f6a-9812-558a00aa99d4",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "2125ff0b-f3e1-4aa7-90a1-81ef1bd7ec64",
+          "selected": [
+            "C",
+            "E"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "2e81bf69-7077-436e-a4b7-f1e7b12366f3",
+          "selected": [
+            "D"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "600063c4-11a4-444a-b9b6-057b90da99d3",
+          "selected": [
+            "B",
+            "C"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "bf4f7153-17ff-4190-b371-adee1bf7da9a",
+          "selected": [
+            "C"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "94f21529-960b-497c-8a18-6eb66abf3381",
+          "selected": [
+            "B"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "4bdc1081-f88e-48ae-bdac-dd8fc8f9bc29",
+          "selected": [
+            "D"
+          ],
+          "correct": true,
+          "unanswered": false
+        }
+      ]
+    },
+    {
+      "id": "429dd5ab-0d54-41f2-8b97-bc93a75fce41",
+      "sessionId": "76a9266a-dd85-47d3-8ceb-3231ea9431d0",
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "kind": "practice",
+      "rangeStart": 200,
+      "rangeEnd": 250,
+      "reviewOfResultId": "12659915-409b-414c-bb17-6fb170341dff",
+      "completedAt": "2026-10-03T08:55:55.096Z",
+      "results": [
+        {
+          "questionId": "41bd13f6-6f64-4d7b-a52c-9126ed3b2af1",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "94882587-0415-4755-8143-086da6a091ff",
+          "selected": [
+            "D"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "94f21529-960b-497c-8a18-6eb66abf3381",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "f28c956e-888d-408c-8526-a909e7148049",
+          "selected": [
+            "B"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "600063c4-11a4-444a-b9b6-057b90da99d3",
+          "selected": [
+            "B",
+            "C"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "3a4a9899-58a3-44e0-beb5-d127cd7894bb",
+          "selected": [
+            "C"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "792505f2-af09-45f4-a89b-f16aa69593a2",
+          "selected": [
+            "D"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "7aa82df7-4548-4b10-89c8-64f9df4f4ab6",
+          "selected": [
+            "B"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "acb0a9b2-1595-4cae-94ef-ce049c4ae179",
+          "selected": [
+            "C"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "bf4f7153-17ff-4190-b371-adee1bf7da9a",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "12f3d650-4d36-4568-aa47-8140977f5d3f",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "e20a4124-75c6-40ff-9ce8-e8a29bd25864",
+          "selected": [
+            "A"
+          ],
+          "correct": false,
+          "unanswered": false
+        },
+        {
+          "questionId": "a396e841-af99-43df-bb1f-020eb74d66f2",
+          "selected": [
+            "A"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "df4272fa-f002-48a1-b8cc-66263886b554",
+          "selected": [
+            "B"
+          ],
+          "correct": true,
+          "unanswered": false
+        }
+      ]
+    },
+    {
+      "id": "46b087d7-3072-48f4-bffb-0d5564703217",
+      "sessionId": "45dea1f1-3fa4-4990-af36-940c6d796332",
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "kind": "practice",
+      "rangeStart": 200,
+      "rangeEnd": 250,
+      "reviewOfResultId": "429dd5ab-0d54-41f2-8b97-bc93a75fce41",
+      "completedAt": "2026-10-03T08:57:27.080Z",
+      "results": [
+        {
+          "questionId": "3a4a9899-58a3-44e0-beb5-d127cd7894bb",
+          "selected": [
+            "B"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "600063c4-11a4-444a-b9b6-057b90da99d3",
+          "selected": [
+            "C",
+            "E"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "e20a4124-75c6-40ff-9ce8-e8a29bd25864",
+          "selected": [
+            "C"
+          ],
+          "correct": true,
+          "unanswered": false
+        },
+        {
+          "questionId": "7aa82df7-4548-4b10-89c8-64f9df4f4ab6",
+          "selected": [
+            "D"
+          ],
+          "correct": true,
+          "unanswered": false
+        }
+      ]
     }
   ],
   "wrongAnswers": [
@@ -60113,7 +61225,6 @@
         "35ab5031-780c-4fd0-b626-6612296a21db",
         "4fde9f2e-a7fc-41d3-938b-242d9541aa5a",
         "27f95f4a-6fc9-4215-a028-3cbfff3f17ef",
-        "712fb23c-0d1c-4e5c-bf9c-615eb3e2ba02",
         "4e76d692-4141-42cc-8fdb-ff5908b6e701",
         "376e15b3-241f-4042-810c-a82b994a8b97",
         "304c75bb-fe73-41e0-9b14-376efeb64c07",
@@ -60134,7 +61245,23 @@
         "6cc50f9d-f78d-4c21-881c-edb39362b197",
         "8a26c531-86e7-4c12-a85c-2226a219af98",
         "fdaeaa91-1781-434e-a3f6-3b85c76202f8",
-        "e9d5e0e1-96e0-4278-894f-de52a88b674a"
+        "e9d5e0e1-96e0-4278-894f-de52a88b674a",
+        "41bd13f6-6f64-4d7b-a52c-9126ed3b2af1",
+        "e20a4124-75c6-40ff-9ce8-e8a29bd25864",
+        "a396e841-af99-43df-bb1f-020eb74d66f2",
+        "acb0a9b2-1595-4cae-94ef-ce049c4ae179",
+        "f28c956e-888d-408c-8526-a909e7148049",
+        "df4272fa-f002-48a1-b8cc-66263886b554",
+        "12f3d650-4d36-4568-aa47-8140977f5d3f",
+        "3a4a9899-58a3-44e0-beb5-d127cd7894bb",
+        "94882587-0415-4755-8143-086da6a091ff",
+        "792505f2-af09-45f4-a89b-f16aa69593a2",
+        "7aa82df7-4548-4b10-89c8-64f9df4f4ab6",
+        "600063c4-11a4-444a-b9b6-057b90da99d3",
+        "bf4f7153-17ff-4190-b371-adee1bf7da9a",
+        "94f21529-960b-497c-8a18-6eb66abf3381",
+        "a25df38f-6bdb-45b6-8ee9-05cc506922bc",
+        "a98b6c9e-a757-4a10-bf83-4d93cb14768a"
       ]
     }
   ],
@@ -60237,77 +61364,147 @@
         2
       ],
       "conceptMastery": {
-        "Amazon S3 Architecture Decision": {
+        "Encryption with KMS": {
           "attempts": 1,
           "correct": 1,
           "percentage": 100
+        },
+        "Lambda Concurrency": {
+          "attempts": 1,
+          "correct": 1,
+          "percentage": 100
+        },
+        "Lambda Event Source": {
+          "attempts": 2,
+          "correct": 2,
+          "percentage": 100
+        },
+        "Amazon EC2 Architecture Decision": {
+          "attempts": 1,
+          "correct": 1,
+          "percentage": 100
+        },
+        "CI/CD Pipeline": {
+          "attempts": 1,
+          "correct": 1,
+          "percentage": 100
+        },
+        "Distributed Tracing": {
+          "attempts": 1,
+          "correct": 0,
+          "percentage": 0
         },
         "DynamoDB GSI": {
           "attempts": 1,
-          "correct": 1,
+          "correct": 0,
+          "percentage": 0
+        },
+        "FIFO Ordering and Deduplication": {
+          "attempts": 1,
+          "correct": 0,
+          "percentage": 0
+        },
+        "Lambda Cold Start": {
+          "attempts": 1,
+          "correct": 0,
+          "percentage": 0
+        },
+        "Application Caching": {
+          "attempts": 2,
+          "correct": 2,
           "percentage": 100
         },
-        "S3 Access Control": {
+        "AWS Lambda Architecture Decision": {
+          "attempts": 1,
+          "correct": 0,
+          "percentage": 0
+        },
+        "AWS CloudFormation Architecture Decision": {
           "attempts": 1,
           "correct": 1,
           "percentage": 100
         },
-        "Lambda VPC Integration": {
+        "Amazon CloudWatch Architecture Decision": {
           "attempts": 1,
-          "correct": 1,
-          "percentage": 100
+          "correct": 0,
+          "percentage": 0
         },
-        "Cognito Identity Pool": {
+        "AWS Architecture Decision": {
           "attempts": 1,
           "correct": 1,
           "percentage": 100
         },
         "Workflow Orchestration": {
           "attempts": 1,
-          "correct": 1,
-          "percentage": 100
+          "correct": 0,
+          "percentage": 0
         },
-        "DynamoDB Streams": {
+        "API Gateway Lambda Integration": {
           "attempts": 1,
-          "correct": 1,
-          "percentage": 100
+          "correct": 0,
+          "percentage": 0
         }
       },
       "patternMastery": {
-        "OTHER": {
+        "KMS": {
           "attempts": 1,
           "correct": 1,
           "percentage": 100
+        },
+        "Concurrency Control": {
+          "attempts": 1,
+          "correct": 1,
+          "percentage": 100
+        },
+        "Event Source Mapping": {
+          "attempts": 2,
+          "correct": 2,
+          "percentage": 100
+        },
+        "OTHER": {
+          "attempts": 5,
+          "correct": 3,
+          "percentage": 60
+        },
+        "CodePipeline": {
+          "attempts": 1,
+          "correct": 1,
+          "percentage": 100
+        },
+        "X-Ray": {
+          "attempts": 1,
+          "correct": 0,
+          "percentage": 0
         },
         "GSI": {
           "attempts": 1,
-          "correct": 1,
-          "percentage": 100
+          "correct": 0,
+          "percentage": 0
         },
-        "S3 Access": {
+        "FIFO": {
           "attempts": 1,
-          "correct": 1,
-          "percentage": 100
+          "correct": 0,
+          "percentage": 0
         },
-        "VPC Integration": {
+        "Cold Start / Performance": {
           "attempts": 1,
-          "correct": 1,
-          "percentage": 100
+          "correct": 0,
+          "percentage": 0
         },
-        "Cognito Identity Pool": {
-          "attempts": 1,
-          "correct": 1,
+        "ElastiCache": {
+          "attempts": 2,
+          "correct": 2,
           "percentage": 100
         },
         "Step Functions": {
           "attempts": 1,
-          "correct": 1,
-          "percentage": 100
+          "correct": 0,
+          "percentage": 0
         },
-        "Streams": {
+        "Lambda Integration": {
           "attempts": 1,
-          "correct": 1,
-          "percentage": 100
+          "correct": 0,
+          "percentage": 0
         }
       }
     }
@@ -61600,17 +62797,17 @@
     {
       "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
       "questionId": "aa183674-98b4-4fca-9d8c-2a1331b6fb77",
-      "wrongCount": 5,
-      "retryCount": 5,
+      "wrongCount": 6,
+      "retryCount": 6,
       "firstWrongAt": "2026-10-03T04:13:34.275Z",
       "lastAttemptAnswer": [
-        "C",
-        "E"
+        "E",
+        "C"
       ],
       "lastAttemptCorrect": false,
       "resolved": false,
       "persistent": true,
-      "lastReviewedAt": "2026-10-03T04:29:46.104Z",
+      "lastReviewedAt": "2026-10-03T09:36:20.063Z",
       "concept": "API Gateway Lambda Integration",
       "pattern": "Lambda Integration"
     },
@@ -61768,16 +62965,16 @@
     {
       "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
       "questionId": "e8103ad0-c8c1-45a1-a4bc-78e5462db4ef",
-      "wrongCount": 5,
-      "retryCount": 7,
+      "wrongCount": 6,
+      "retryCount": 8,
       "firstWrongAt": "2026-10-03T05:23:01.476Z",
       "lastAttemptAnswer": [
-        "A"
+        "B"
       ],
-      "lastAttemptCorrect": true,
+      "lastAttemptCorrect": false,
       "resolved": false,
       "persistent": true,
-      "lastReviewedAt": "2026-10-03T05:35:08.244Z",
+      "lastReviewedAt": "2026-10-03T09:36:00.201Z",
       "concept": "Workflow Orchestration",
       "pattern": "Step Functions"
     },
@@ -61898,17 +63095,17 @@
     {
       "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
       "questionId": "35ab5031-780c-4fd0-b626-6612296a21db",
-      "wrongCount": 3,
-      "retryCount": 5,
+      "wrongCount": 4,
+      "retryCount": 6,
       "firstWrongAt": "2026-10-03T05:23:01.476Z",
       "lastAttemptAnswer": [
-        "D",
-        "A"
+        "A",
+        "E"
       ],
-      "lastAttemptCorrect": true,
+      "lastAttemptCorrect": false,
       "resolved": false,
       "persistent": true,
-      "lastReviewedAt": "2026-10-03T05:34:09.152Z",
+      "lastReviewedAt": "2026-10-03T09:34:38.075Z",
       "concept": "AWS Lambda Architecture Decision",
       "pattern": "OTHER"
     },
@@ -61949,7 +63146,7 @@
       "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
       "questionId": "712fb23c-0d1c-4e5c-bf9c-615eb3e2ba02",
       "wrongCount": 1,
-      "retryCount": 3,
+      "retryCount": 4,
       "firstWrongAt": "2026-10-03T05:23:01.477Z",
       "lastAttemptAnswer": [
         "B"
@@ -61957,8 +63154,8 @@
       "lastAttemptCorrect": true,
       "resolved": true,
       "persistent": false,
-      "lastReviewedAt": "2026-10-03T05:31:21.063Z",
-      "resolvedAt": "2026-10-03T05:31:21.063Z",
+      "lastReviewedAt": "2026-10-03T09:23:49.557Z",
+      "resolvedAt": "2026-10-03T09:23:49.557Z",
       "concept": "CI/CD Pipeline",
       "pattern": "CodePipeline"
     },
@@ -62051,7 +63248,7 @@
       "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
       "questionId": "1360dcf1-8500-41ea-8ffc-7cedc42f4ed3",
       "wrongCount": 1,
-      "retryCount": 3,
+      "retryCount": 4,
       "firstWrongAt": "2026-10-03T07:03:35.837Z",
       "lastAttemptAnswer": [
         "A"
@@ -62059,8 +63256,8 @@
       "lastAttemptCorrect": true,
       "resolved": true,
       "persistent": false,
-      "lastReviewedAt": "2026-10-03T07:08:24.534Z",
-      "resolvedAt": "2026-10-03T07:08:24.534Z",
+      "lastReviewedAt": "2026-10-03T09:35:30.831Z",
+      "resolvedAt": "2026-10-03T09:35:30.831Z",
       "concept": "Application Caching",
       "pattern": "ElastiCache"
     },
@@ -62150,16 +63347,16 @@
     {
       "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
       "questionId": "4a9bb48b-f650-4189-8d17-a0210d66ede7",
-      "wrongCount": 3,
-      "retryCount": 5,
+      "wrongCount": 4,
+      "retryCount": 6,
       "firstWrongAt": "2026-10-03T08:01:22.307Z",
       "lastAttemptAnswer": [
-        "D"
+        "C"
       ],
-      "lastAttemptCorrect": true,
+      "lastAttemptCorrect": false,
       "resolved": false,
       "persistent": true,
-      "lastReviewedAt": "2026-10-03T08:06:34.120Z",
+      "lastReviewedAt": "2026-10-03T09:25:17.631Z",
       "concept": "DynamoDB GSI",
       "pattern": "GSI"
     },
@@ -62215,17 +63412,16 @@
     {
       "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
       "questionId": "b97c138e-37c6-4145-ab51-b8e17cae9137",
-      "wrongCount": 1,
-      "retryCount": 3,
+      "wrongCount": 2,
+      "retryCount": 4,
       "firstWrongAt": "2026-10-03T08:01:22.307Z",
       "lastAttemptAnswer": [
-        "D"
+        "C"
       ],
-      "lastAttemptCorrect": true,
-      "resolved": true,
-      "persistent": false,
-      "lastReviewedAt": "2026-10-03T08:05:26.467Z",
-      "resolvedAt": "2026-10-03T08:05:26.467Z",
+      "lastAttemptCorrect": false,
+      "resolved": false,
+      "persistent": true,
+      "lastReviewedAt": "2026-10-03T09:35:16.425Z",
       "concept": "Amazon CloudWatch Architecture Decision",
       "pattern": "OTHER"
     },
@@ -62310,6 +63506,273 @@
       "lastReviewedAt": "2026-10-03T08:06:34.120Z",
       "concept": "Amazon S3 Architecture Decision",
       "pattern": "OTHER"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "41bd13f6-6f64-4d7b-a52c-9126ed3b2af1",
+      "wrongCount": 1,
+      "retryCount": 3,
+      "firstWrongAt": "2026-10-03T08:48:37.664Z",
+      "lastAttemptAnswer": [
+        "A"
+      ],
+      "lastAttemptCorrect": true,
+      "resolved": true,
+      "persistent": false,
+      "lastReviewedAt": "2026-10-03T08:55:55.096Z",
+      "resolvedAt": "2026-10-03T08:55:55.096Z",
+      "concept": "S3 Access Control",
+      "pattern": "S3 Access"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "e20a4124-75c6-40ff-9ce8-e8a29bd25864",
+      "wrongCount": 3,
+      "retryCount": 6,
+      "firstWrongAt": "2026-10-03T08:48:37.664Z",
+      "lastAttemptAnswer": [
+        "C"
+      ],
+      "lastAttemptCorrect": true,
+      "resolved": false,
+      "persistent": true,
+      "lastReviewedAt": "2026-10-03T09:36:32.395Z",
+      "concept": "Lambda Event Source",
+      "pattern": "Event Source Mapping"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "a396e841-af99-43df-bb1f-020eb74d66f2",
+      "wrongCount": 1,
+      "retryCount": 3,
+      "firstWrongAt": "2026-10-03T08:48:37.664Z",
+      "lastAttemptAnswer": [
+        "A"
+      ],
+      "lastAttemptCorrect": true,
+      "resolved": true,
+      "persistent": false,
+      "lastReviewedAt": "2026-10-03T08:55:55.097Z",
+      "resolvedAt": "2026-10-03T08:55:55.097Z",
+      "concept": "API Usage Control",
+      "pattern": "API Key / Usage Plan"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "acb0a9b2-1595-4cae-94ef-ce049c4ae179",
+      "wrongCount": 1,
+      "retryCount": 3,
+      "firstWrongAt": "2026-10-03T08:48:37.664Z",
+      "lastAttemptAnswer": [
+        "C"
+      ],
+      "lastAttemptCorrect": true,
+      "resolved": true,
+      "persistent": false,
+      "lastReviewedAt": "2026-10-03T08:55:55.097Z",
+      "resolvedAt": "2026-10-03T08:55:55.097Z",
+      "concept": "IAM Role and Permissions",
+      "pattern": "IAM Role"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "f28c956e-888d-408c-8526-a909e7148049",
+      "wrongCount": 1,
+      "retryCount": 3,
+      "firstWrongAt": "2026-10-03T08:48:37.664Z",
+      "lastAttemptAnswer": [
+        "B"
+      ],
+      "lastAttemptCorrect": true,
+      "resolved": true,
+      "persistent": false,
+      "lastReviewedAt": "2026-10-03T08:55:55.096Z",
+      "resolvedAt": "2026-10-03T08:55:55.096Z",
+      "concept": "API Authentication with Cognito",
+      "pattern": "Cognito"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "df4272fa-f002-48a1-b8cc-66263886b554",
+      "wrongCount": 1,
+      "retryCount": 3,
+      "firstWrongAt": "2026-10-03T08:48:37.664Z",
+      "lastAttemptAnswer": [
+        "B"
+      ],
+      "lastAttemptCorrect": true,
+      "resolved": true,
+      "persistent": false,
+      "lastReviewedAt": "2026-10-03T08:55:55.097Z",
+      "resolvedAt": "2026-10-03T08:55:55.097Z",
+      "concept": "Lambda Execution Role",
+      "pattern": "Execution Role"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "12f3d650-4d36-4568-aa47-8140977f5d3f",
+      "wrongCount": 1,
+      "retryCount": 3,
+      "firstWrongAt": "2026-10-03T08:48:37.664Z",
+      "lastAttemptAnswer": [
+        "A"
+      ],
+      "lastAttemptCorrect": true,
+      "resolved": true,
+      "persistent": false,
+      "lastReviewedAt": "2026-10-03T08:55:55.097Z",
+      "resolvedAt": "2026-10-03T08:55:55.097Z",
+      "concept": "Secrets Management",
+      "pattern": "Secrets Manager"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "3a4a9899-58a3-44e0-beb5-d127cd7894bb",
+      "wrongCount": 3,
+      "retryCount": 5,
+      "firstWrongAt": "2026-10-03T08:48:37.664Z",
+      "lastAttemptAnswer": [
+        "B"
+      ],
+      "lastAttemptCorrect": true,
+      "resolved": false,
+      "persistent": true,
+      "lastReviewedAt": "2026-10-03T08:57:27.080Z",
+      "concept": "Encryption with KMS",
+      "pattern": "KMS"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "94882587-0415-4755-8143-086da6a091ff",
+      "wrongCount": 1,
+      "retryCount": 3,
+      "firstWrongAt": "2026-10-03T08:48:37.664Z",
+      "lastAttemptAnswer": [
+        "D"
+      ],
+      "lastAttemptCorrect": true,
+      "resolved": true,
+      "persistent": false,
+      "lastReviewedAt": "2026-10-03T08:55:55.096Z",
+      "resolvedAt": "2026-10-03T08:55:55.096Z",
+      "concept": "Lambda Execution Role",
+      "pattern": "Execution Role"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "792505f2-af09-45f4-a89b-f16aa69593a2",
+      "wrongCount": 1,
+      "retryCount": 3,
+      "firstWrongAt": "2026-10-03T08:48:37.664Z",
+      "lastAttemptAnswer": [
+        "D"
+      ],
+      "lastAttemptCorrect": true,
+      "resolved": true,
+      "persistent": false,
+      "lastReviewedAt": "2026-10-03T08:55:55.096Z",
+      "resolvedAt": "2026-10-03T08:55:55.096Z",
+      "concept": "Lambda Concurrency",
+      "pattern": "Concurrency Control"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "7aa82df7-4548-4b10-89c8-64f9df4f4ab6",
+      "wrongCount": 3,
+      "retryCount": 5,
+      "firstWrongAt": "2026-10-03T08:48:37.664Z",
+      "lastAttemptAnswer": [
+        "D"
+      ],
+      "lastAttemptCorrect": true,
+      "resolved": false,
+      "persistent": true,
+      "lastReviewedAt": "2026-10-03T08:57:27.080Z",
+      "concept": "Amazon EC2 Architecture Decision",
+      "pattern": "OTHER"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "600063c4-11a4-444a-b9b6-057b90da99d3",
+      "wrongCount": 3,
+      "retryCount": 5,
+      "firstWrongAt": "2026-10-03T08:48:37.664Z",
+      "lastAttemptAnswer": [
+        "C",
+        "E"
+      ],
+      "lastAttemptCorrect": true,
+      "resolved": false,
+      "persistent": true,
+      "lastReviewedAt": "2026-10-03T08:57:27.080Z",
+      "concept": "Lambda Concurrency",
+      "pattern": "Concurrency Control"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "bf4f7153-17ff-4190-b371-adee1bf7da9a",
+      "wrongCount": 1,
+      "retryCount": 3,
+      "firstWrongAt": "2026-10-03T08:48:37.664Z",
+      "lastAttemptAnswer": [
+        "A"
+      ],
+      "lastAttemptCorrect": true,
+      "resolved": true,
+      "persistent": false,
+      "lastReviewedAt": "2026-10-03T08:55:55.097Z",
+      "resolvedAt": "2026-10-03T08:55:55.097Z",
+      "concept": "S3 Access Control",
+      "pattern": "S3 Access"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "94f21529-960b-497c-8a18-6eb66abf3381",
+      "wrongCount": 2,
+      "retryCount": 4,
+      "firstWrongAt": "2026-10-03T08:48:37.664Z",
+      "lastAttemptAnswer": [
+        "C"
+      ],
+      "lastAttemptCorrect": false,
+      "resolved": false,
+      "persistent": true,
+      "lastReviewedAt": "2026-10-03T09:24:14.920Z",
+      "concept": "Distributed Tracing",
+      "pattern": "X-Ray"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "a25df38f-6bdb-45b6-8ee9-05cc506922bc",
+      "wrongCount": 1,
+      "retryCount": 1,
+      "firstWrongAt": "2026-10-03T09:33:35.234Z",
+      "lastAttemptAnswer": [
+        "A",
+        "D"
+      ],
+      "lastAttemptCorrect": false,
+      "resolved": false,
+      "persistent": false,
+      "lastReviewedAt": "2026-10-03T09:33:35.234Z",
+      "concept": "FIFO Ordering and Deduplication",
+      "pattern": "FIFO"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "a98b6c9e-a757-4a10-bf83-4d93cb14768a",
+      "wrongCount": 1,
+      "retryCount": 1,
+      "firstWrongAt": "2026-10-03T09:34:00.482Z",
+      "lastAttemptAnswer": [
+        "B"
+      ],
+      "lastAttemptCorrect": false,
+      "resolved": false,
+      "persistent": false,
+      "lastReviewedAt": "2026-10-03T09:34:00.482Z",
+      "concept": "Lambda Cold Start",
+      "pattern": "Cold Start / Performance"
     }
   ],
   "bookmarks": [
@@ -62477,6 +63940,76 @@
       "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
       "questionId": "091176a2-1b19-4e76-b666-cd406097b9f6",
       "createdAt": "2026-10-03T08:00:12.304Z"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "e20a4124-75c6-40ff-9ce8-e8a29bd25864",
+      "createdAt": "2026-10-03T08:13:45.456Z"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "243a871e-b424-41e6-b038-658e06fca99a",
+      "createdAt": "2026-10-03T08:14:47.390Z"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "2735921d-e837-433e-9326-4d81939e88d2",
+      "createdAt": "2026-10-03T08:16:17.180Z"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "c315a3f7-5b35-44b9-8d2e-4fef934004c4",
+      "createdAt": "2026-10-03T08:16:44.980Z"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "acb0a9b2-1595-4cae-94ef-ce049c4ae179",
+      "createdAt": "2026-10-03T08:34:21.856Z"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "ce416b9f-efd6-4c42-879e-66b25901d9c4",
+      "createdAt": "2026-10-03T08:35:28.692Z"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "12f3d650-4d36-4568-aa47-8140977f5d3f",
+      "createdAt": "2026-10-03T08:38:38.046Z"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "338e754f-3ac3-4c19-9eb6-0482c3c05705",
+      "createdAt": "2026-10-03T08:38:44.457Z"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "b001af49-8a91-48da-9ea4-8ebe4ac2e1e1",
+      "createdAt": "2026-10-03T08:44:41.837Z"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "b8ef03fd-85e4-4436-86fa-455729d93cd0",
+      "createdAt": "2026-10-03T08:45:35.045Z"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "600063c4-11a4-444a-b9b6-057b90da99d3",
+      "createdAt": "2026-10-03T08:46:10.731Z"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "a3294fea-d4b1-432b-8c42-d2ceb9d73186",
+      "createdAt": "2026-10-03T08:47:01.250Z"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "94f21529-960b-497c-8a18-6eb66abf3381",
+      "createdAt": "2026-10-03T08:48:35.530Z"
+    },
+    {
+      "bankId": "2987460c-9224-4ba4-9cac-4872bc68cdb3",
+      "questionId": "3a4a9899-58a3-44e0-beb5-d127cd7894bb",
+      "createdAt": "2026-10-03T08:51:48.356Z"
     }
   ]
 }
